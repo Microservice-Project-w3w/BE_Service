@@ -27,30 +27,44 @@ public class JwtService {
         this.accessTokenMinutes = accessTokenMinutes;
     }
 
-    public String generateAccessToken(User user) {
+    public String generateAccessToken(User user, Long sessionId) {
         Instant now = Instant.now();
         Instant expiresAt = now.plus(
                 Duration.ofMinutes(accessTokenMinutes)
         );
 
-        JwtClaimsSet claims = JwtClaimsSet.builder()
+        JwtClaimsSet.Builder claims = JwtClaimsSet.builder()
                 .issuer(issuer)
                 .issuedAt(now)
                 .expiresAt(expiresAt)
-                .subject(user.getEmail())
+                .subject(String.valueOf(user.getId()))
+                .claim("preferred_username", user.getEmail())
+                .claim("username", user.getEmail())
                 .claim("userId", user.getId())
                 .claim(
                         "roles",
                         List.of(user.getRole().getCode())
                 )
-                .build();
+                .claim("permissions", user.getRole().getPermissions().stream()
+                        .map(permission -> permission.getCode())
+                        .sorted()
+                        .toList())
+                .claim("branchIds", user.getBranchIds());
+
+        if (sessionId != null) {
+            claims.claim("sessionId", String.valueOf(sessionId));
+        }
+
+        if (user.getOrganizationId() != null) {
+            claims.claim("organizationId", user.getOrganizationId());
+        }
 
         JwsHeader header = JwsHeader
                 .with(MacAlgorithm.HS256)
                 .build();
 
         JwtEncoderParameters parameters =
-                JwtEncoderParameters.from(header, claims);
+                JwtEncoderParameters.from(header, claims.build());
 
         return jwtEncoder
                 .encode(parameters)

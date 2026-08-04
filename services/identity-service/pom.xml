@@ -53,6 +53,18 @@
             </artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>com.equipmentrental</groupId>
+            <artifactId>common-security</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.equipmentrental</groupId>
+            <artifactId>common-web</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- Kết nối MySQL -->
         <dependency>
             <groupId>com.mysql</groupId>

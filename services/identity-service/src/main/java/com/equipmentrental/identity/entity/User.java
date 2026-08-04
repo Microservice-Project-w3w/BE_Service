@@ -3,6 +3,8 @@ package com.equipmentrental.identity.entity;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Entity
 @Table(
@@ -45,6 +47,14 @@ public class User {
             )
     )
     private Role role;
+
+    @Column(name = "organization_id")
+    private Long organizationId;
+
+    @ElementCollection
+    @CollectionTable(name = "user_branch_assignments", joinColumns = @JoinColumn(name = "user_id"))
+    @Column(name = "branch_id", nullable = false)
+    private Set<Long> branchIds = new LinkedHashSet<>();
 
     @Column(
             name = "full_name",
@@ -164,6 +174,14 @@ public class User {
         return role;
     }
 
+    public Long getOrganizationId() {
+        return organizationId;
+    }
+
+    public Set<Long> getBranchIds() {
+        return Set.copyOf(branchIds);
+    }
+
     public String getFullName() {
         return fullName;
     }
@@ -206,6 +224,17 @@ public class User {
 
     public void setRole(Role role) {
         this.role = role;
+    }
+
+    public void setOrganizationId(Long organizationId) {
+        this.organizationId = organizationId;
+    }
+
+    public void setBranchIds(Set<Long> branchIds) {
+        this.branchIds.clear();
+        if (branchIds != null) {
+            this.branchIds.addAll(branchIds);
+        }
     }
 
     public void setFullName(String fullName) {

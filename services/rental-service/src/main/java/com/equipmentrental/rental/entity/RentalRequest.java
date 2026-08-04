@@ -11,6 +11,10 @@ public class RentalRequest {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @Column(nullable = false)
+    private Long organizationId;
+    @Column(nullable = false)
+    private Long branchId;
     @Column(nullable = false, unique = true, length = 50)
     private String requestCode;
     @Column(nullable = false)
@@ -41,12 +45,35 @@ public class RentalRequest {
         items.add(item);
     }
 
+    public void replaceItems(List<RentalRequestItem> replacement) {
+        items.clear();
+        if (replacement != null) {
+            replacement.forEach(this::addItem);
+        }
+    }
+
     public Long getId() {
         return id;
     }
 
     public String getRequestCode() {
         return requestCode;
+    }
+
+    public Long getOrganizationId() {
+        return organizationId;
+    }
+
+    public void setOrganizationId(Long value) {
+        organizationId = value;
+    }
+
+    public Long getBranchId() {
+        return branchId;
+    }
+
+    public void setBranchId(Long value) {
+        branchId = value;
     }
 
     public void setRequestCode(String v) {

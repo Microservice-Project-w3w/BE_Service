@@ -4,6 +4,7 @@ public record RegisterResponse(
         Long userId,
         String email,
         String status,
-        String message
+        String message,
+        String verificationCode
 ) {
 }

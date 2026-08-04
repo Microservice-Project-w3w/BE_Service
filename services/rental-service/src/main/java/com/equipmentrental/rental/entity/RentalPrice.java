@@ -5,11 +5,18 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "rental_prices")
+@Table(name = "rental_prices", uniqueConstraints = @UniqueConstraint(
+        name = "uk_rental_price_equipment_unit_valid_from",
+        columnNames = {"equipment_type_id", "rental_unit", "organization_id", "branch_id", "valid_from"}
+))
 public class RentalPrice {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @Column(nullable = false)
+    private Long organizationId;
+    @Column(nullable = false)
+    private Long branchId;
     @Column(nullable = false, length = 150)
     private String priceName;
     @Column(nullable = false)
@@ -56,6 +63,22 @@ public class RentalPrice {
 
     public String getPriceName() {
         return priceName;
+    }
+
+    public Long getOrganizationId() {
+        return organizationId;
+    }
+
+    public void setOrganizationId(Long value) {
+        organizationId = value;
+    }
+
+    public Long getBranchId() {
+        return branchId;
+    }
+
+    public void setBranchId(Long value) {
+        branchId = value;
     }
 
     public void setPriceName(String v) {

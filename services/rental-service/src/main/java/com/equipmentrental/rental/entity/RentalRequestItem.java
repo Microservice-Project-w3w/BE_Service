@@ -1,5 +1,6 @@
 package com.equipmentrental.rental.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 @Entity
@@ -20,6 +21,7 @@ public class RentalRequestItem {
         return id;
     }
 
+    @JsonIgnore
     public RentalRequest getRentalRequest() {
         return rentalRequest;
     }

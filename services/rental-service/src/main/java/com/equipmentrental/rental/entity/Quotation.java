@@ -10,6 +10,10 @@ public class Quotation {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @Column(nullable = false)
+    private Long organizationId;
+    @Column(nullable = false)
+    private Long branchId;
     @Column(nullable = false, unique = true, length = 50)
     private String quotationCode;
     @Column(nullable = false)
@@ -42,6 +46,22 @@ public class Quotation {
 
     public String getQuotationCode() {
         return quotationCode;
+    }
+
+    public Long getOrganizationId() {
+        return organizationId;
+    }
+
+    public void setOrganizationId(Long value) {
+        organizationId = value;
+    }
+
+    public Long getBranchId() {
+        return branchId;
+    }
+
+    public void setBranchId(Long value) {
+        branchId = value;
     }
 
     public void setQuotationCode(String v) {

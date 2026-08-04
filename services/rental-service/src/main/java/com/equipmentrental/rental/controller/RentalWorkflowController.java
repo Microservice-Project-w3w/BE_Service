@@ -1,13 +1,23 @@
 package com.equipmentrental.rental.controller;
 
-import com.equipmentrental.rental.dto.*;
-import com.equipmentrental.rental.entity.*;
+import com.equipmentrental.common.web.ApiResponse;
+import com.equipmentrental.rental.dto.QuotationCreate;
+import com.equipmentrental.rental.dto.request.CancelOrderRequest;
+import com.equipmentrental.rental.dto.request.RentalRequestCreate;
+import com.equipmentrental.rental.dto.request.ReserveOrderRequest;
+import com.equipmentrental.rental.dto.request.RentalRequestUpdate;
+import com.equipmentrental.rental.dto.request.QuotationUpdate;
+import com.equipmentrental.rental.dto.response.QuotationResponse;
+import com.equipmentrental.rental.dto.response.RentalOrderResponse;
+import com.equipmentrental.rental.dto.response.RentalRequestResponse;
 import com.equipmentrental.rental.service.RentalWorkflowService;
 import jakarta.validation.Valid;
 import org.springframework.http.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.*;
+import com.fasterxml.jackson.databind.JsonNode;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -19,82 +29,122 @@ public class RentalWorkflowController {
     }
 
     @GetMapping("/availability")
-    Map<String, Object> availability(@RequestParam Long equipmentTypeId, @RequestParam LocalDateTime startAt,
+    @PreAuthorize("hasAuthority('inventory.availability.read')")
+    ApiResponse<JsonNode> availability(@RequestParam Long organizationId, @RequestParam Long branchId, @RequestParam Long equipmentTypeId, @RequestParam LocalDateTime startAt,
                                      @RequestParam LocalDateTime endAt, @RequestParam Integer quantity) {
-        return s.availability(equipmentTypeId, startAt, endAt, quantity);
+        return ApiResponse.success(s.availability(organizationId, branchId, equipmentTypeId, startAt, endAt, quantity));
     }
 
     @GetMapping("/equipment/search")
-    Map<String, Object> search(@RequestParam(required = false) String keyword,
+    @PreAuthorize("hasAuthority('inventory.equipment.read')")
+    ApiResponse<Map<String, Object>> search(@RequestParam(required = false) String keyword,
                                @RequestParam(required = false) Long equipmentTypeId, @RequestParam(required = false) String brand,
                                @RequestParam(required = false) String status) {
-        return Map.of("keyword", String.valueOf(keyword), "equipmentTypeId", String.valueOf(equipmentTypeId), "brand",
-                String.valueOf(brand), "status", String.valueOf(status),
-                "results", List.of(), "note", "Cần tích hợp inventory-service để trả thiết bị thật.");
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("keyword", keyword);
+        response.put("equipmentTypeId", equipmentTypeId);
+        response.put("brand", brand);
+        response.put("status", status);
+        response.put("results", List.of());
+        response.put("note", "Cần tích hợp inventory-service để trả thiết bị thật.");
+        return ApiResponse.success(response);
     }
 
     @PostMapping("/rental-requests")
-    ResponseEntity<RentalRequest> request(@Valid @RequestBody RentalRequestCreate r) {
-        return ResponseEntity.status(201).body(s.createRequest(r));
+    @PreAuthorize("hasAuthority('rental.request.create')")
+    ResponseEntity<ApiResponse<RentalRequestResponse>> request(@Valid @RequestBody RentalRequestCreate r) {
+        return ResponseEntity.status(201).body(ApiResponse.success(s.createRequest(r)));
     }
 
     @GetMapping("/rental-requests")
-    List<RentalRequest> requests() {
-        return s.getRequests();
+    @PreAuthorize("hasAuthority('rental.request.read')")
+    ApiResponse<List<RentalRequestResponse>> requests(@RequestParam Long organizationId, @RequestParam Long branchId) {
+        return ApiResponse.success(s.getRequests(organizationId, branchId));
     }
 
     @GetMapping("/rental-requests/{id}")
-    RentalRequest request(@PathVariable Long id) {
-        return s.getRequest(id);
+    @PreAuthorize("hasAuthority('rental.request.read')")
+    ApiResponse<RentalRequestResponse> request(@PathVariable Long id) {
+        return ApiResponse.success(s.getRequest(id));
+    }
+
+    @PutMapping("/rental-requests/{id}")
+    @PreAuthorize("hasAuthority('rental.request.update')")
+    ApiResponse<RentalRequestResponse> updateRequest(@PathVariable Long id, @Valid @RequestBody RentalRequestUpdate request) {
+        return ApiResponse.success(s.updateRequest(id, request));
     }
 
     @PatchMapping("/rental-requests/{id}/cancel")
-    RentalRequest cancelRequest(@PathVariable Long id) {
-        return s.cancelRequest(id);
+    @PreAuthorize("hasAuthority('rental.request.cancel')")
+    ApiResponse<RentalRequestResponse> cancelRequest(@PathVariable Long id) {
+        return ApiResponse.success(s.cancelRequest(id));
     }
 
     @PostMapping("/quotations")
-    ResponseEntity<Quotation> quotation(@Valid @RequestBody QuotationCreate r) {
-        return ResponseEntity.status(201).body(s.createQuotation(r));
+    @PreAuthorize("hasAuthority('rental.quotation.create')")
+    ResponseEntity<ApiResponse<QuotationResponse>> quotation(@Valid @RequestBody QuotationCreate r) {
+        return ResponseEntity.status(201).body(ApiResponse.success(s.createQuotation(r)));
     }
 
     @GetMapping("/quotations")
-    List<Quotation> quotations() {
-        return s.getQuotations();
+    @PreAuthorize("hasAuthority('rental.quotation.read')")
+    ApiResponse<List<QuotationResponse>> quotations(@RequestParam Long organizationId, @RequestParam Long branchId) {
+        return ApiResponse.success(s.getQuotations(organizationId, branchId));
     }
 
     @PatchMapping("/quotations/{id}/send")
-    Quotation send(@PathVariable Long id) {
-        return s.sendQuotation(id);
+    @PreAuthorize("hasAuthority('rental.quotation.send')")
+    ApiResponse<QuotationResponse> send(@PathVariable Long id) {
+        return ApiResponse.success(s.sendQuotation(id));
     }
 
     @PatchMapping("/quotations/{id}/approve")
-    Quotation approve(@PathVariable Long id) {
-        return s.approveQuotation(id);
+    @PreAuthorize("hasAuthority('rental.quotation.approve')")
+    ApiResponse<QuotationResponse> approve(@PathVariable Long id) {
+        return ApiResponse.success(s.approveQuotation(id));
     }
 
     @PatchMapping("/quotations/{id}/accept")
-    Quotation accept(@PathVariable Long id) {
-        return s.acceptQuotation(id);
+    @PreAuthorize("hasAuthority('rental.quotation.accept')")
+    ApiResponse<QuotationResponse> accept(@PathVariable Long id) {
+        return ApiResponse.success(s.acceptQuotation(id));
     }
 
+    @PutMapping("/quotations/{id}")
+    @PreAuthorize("hasAuthority('rental.quotation.update')")
+    ApiResponse<QuotationResponse> updateQuotation(@PathVariable Long id, @Valid @RequestBody QuotationUpdate request) {
+        return ApiResponse.success(s.updateQuotation(id, request));
+    }
+
+    @PatchMapping("/quotations/{id}/reject")
+    @PreAuthorize("hasAuthority('rental.quotation.reject')")
+    ApiResponse<QuotationResponse> reject(@PathVariable Long id) { return ApiResponse.success(s.rejectQuotation(id)); }
+
     @PostMapping("/quotations/{id}/convert-to-order")
-    RentalOrder convert(@PathVariable Long id) {
-        return s.convertToOrder(id);
+    @PreAuthorize("hasAuthority('rental.order.create')")
+    ApiResponse<RentalOrderResponse> convert(@PathVariable Long id) {
+        return ApiResponse.success(s.convertToOrder(id));
     }
 
     @GetMapping("/rental-orders")
-    List<RentalOrder> orders() {
-        return s.getOrders();
+    @PreAuthorize("hasAuthority('rental.order.read')")
+    ApiResponse<List<RentalOrderResponse>> orders(@RequestParam Long organizationId, @RequestParam Long branchId) {
+        return ApiResponse.success(s.getOrders(organizationId, branchId));
     }
 
     @PatchMapping("/rental-orders/{id}/reserve")
-    RentalOrder reserve(@PathVariable Long id, @Valid @RequestBody ReserveOrderRequest r) {
-        return s.reserve(id, r);
+    @PreAuthorize("hasAuthority('inventory.reservation.create')")
+    ApiResponse<RentalOrderResponse> reserve(@PathVariable Long id, @Valid @RequestBody ReserveOrderRequest r) {
+        return ApiResponse.success(s.reserve(id, r));
     }
 
+    @PatchMapping("/rental-orders/{id}/confirm")
+    @PreAuthorize("hasAuthority('inventory.reservation.confirm')")
+    ApiResponse<RentalOrderResponse> confirm(@PathVariable Long id) { return ApiResponse.success(s.confirmOrder(id)); }
+
     @PatchMapping("/rental-orders/{id}/cancel")
-    RentalOrder cancelOrder(@PathVariable Long id, @Valid @RequestBody CancelOrderRequest r) {
-        return s.cancelOrder(id, r);
+    @PreAuthorize("hasAuthority('rental.order.cancel')")
+    ApiResponse<RentalOrderResponse> cancelOrder(@PathVariable Long id, @Valid @RequestBody CancelOrderRequest r) {
+        return ApiResponse.success(s.cancelOrder(id, r));
     }
 }

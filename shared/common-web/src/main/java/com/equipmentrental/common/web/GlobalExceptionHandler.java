@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
@@ -79,6 +80,15 @@ public class GlobalExceptionHandler {
         return response(CommonErrorCode.AUTH_UNAUTHENTICATED, null, request, List.of());
     }
 
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ApiErrorResponse> handleResponseStatus(
+            ResponseStatusException exception,
+            HttpServletRequest request
+    ) {
+        ErrorCode errorCode = errorCodeFor(exception.getStatusCode().value());
+        return response(errorCode, exception.getReason(), request, List.of());
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleUnexpected(Exception exception, HttpServletRequest request) {
         LOGGER.error(
@@ -103,5 +113,33 @@ public class GlobalExceptionHandler {
     ) {
         return ResponseEntity.status(errorCode.status())
                 .body(ApiErrorResponse.of(errorCode, message, request.getRequestURI(), details));
+    }
+
+    private ErrorCode errorCodeFor(int status) {
+        return switch (status) {
+            case 400 -> CommonErrorCode.VALIDATION_FAILED;
+            case 401 -> CommonErrorCode.AUTH_UNAUTHENTICATED;
+            case 403 -> CommonErrorCode.AUTH_PERMISSION_DENIED;
+            case 404 -> CommonErrorCode.RESOURCE_NOT_FOUND;
+            case 409 -> CommonErrorCode.RESOURCE_CONFLICT;
+            default -> new StatusErrorCode(status);
+        };
+    }
+
+    private record StatusErrorCode(int statusCode) implements ErrorCode {
+        @Override
+        public String code() {
+            return "REQUEST_FAILED";
+        }
+
+        @Override
+        public org.springframework.http.HttpStatus status() {
+            return org.springframework.http.HttpStatus.valueOf(statusCode);
+        }
+
+        @Override
+        public String defaultMessage() {
+            return "Yêu cầu không thể được xử lý";
+        }
     }
 }

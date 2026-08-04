@@ -10,6 +10,10 @@ public class RentalOrder {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @Column(nullable = false)
+    private Long organizationId;
+    @Column(nullable = false)
+    private Long branchId;
     @Column(nullable = false, unique = true, length = 50)
     private String orderCode;
     @Column(nullable = false)
@@ -26,6 +30,8 @@ public class RentalOrder {
     @Column(nullable = false, length = 30)
     private OrderStatus status = OrderStatus.PENDING;
     private LocalDateTime reservedUntil;
+    @Column(length = 100)
+    private String inventoryReservationId;
     @Column(length = 500)
     private String cancelReason;
 
@@ -35,6 +41,22 @@ public class RentalOrder {
 
     public String getOrderCode() {
         return orderCode;
+    }
+
+    public Long getOrganizationId() {
+        return organizationId;
+    }
+
+    public void setOrganizationId(Long value) {
+        organizationId = value;
+    }
+
+    public Long getBranchId() {
+        return branchId;
+    }
+
+    public void setBranchId(Long value) {
+        branchId = value;
     }
 
     public void setOrderCode(String v) {
@@ -96,6 +118,9 @@ public class RentalOrder {
     public void setReservedUntil(LocalDateTime v) {
         reservedUntil = v;
     }
+
+    public String getInventoryReservationId() { return inventoryReservationId; }
+    public void setInventoryReservationId(String value) { inventoryReservationId = value; }
 
     public String getCancelReason() {
         return cancelReason;

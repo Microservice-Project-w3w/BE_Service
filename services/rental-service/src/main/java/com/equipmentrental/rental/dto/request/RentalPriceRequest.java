@@ -5,7 +5,8 @@ import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-public record RentalPriceRequest(@NotBlank String priceName, @NotNull Long equipmentTypeId,
+public record RentalPriceRequest(@NotBlank String priceName, @NotNull Long organizationId, @NotNull Long branchId,
+                                 @NotNull Long equipmentTypeId,
                                  @NotNull RentalUnit rentalUnit,
                                  @NotNull @DecimalMin("0") BigDecimal rentalPrice, @NotNull DepositType depositType,
                                  @NotNull @DecimalMin("0") BigDecimal depositValue,
