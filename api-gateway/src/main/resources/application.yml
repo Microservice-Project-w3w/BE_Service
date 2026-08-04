@@ -1,0 +1,43 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      routes:
+        - id: identity-service
+          uri: ${IDENTITY_SERVICE_URL:http://localhost:8081}
+          predicates:
+            - Path=/api/auth/**,/api/users/**,/api/roles/**
+        - id: organization-customer-service
+          uri: ${ORGANIZATION_CUSTOMER_SERVICE_URL:http://localhost:8082}
+          predicates:
+            - Path=/api/organizations/**,/api/branches/**,/api/employees/**,/api/customers/**
+        - id: inventory-service
+          uri: ${INVENTORY_SERVICE_URL:http://localhost:8083}
+          predicates:
+            - Path=/api/equipments/**,/api/warehouses/**,/api/categories/**
+        - id: rental-service
+          uri: ${RENTAL_SERVICE_URL:http://localhost:8084}
+          predicates:
+            - Path=/api/rentals/**,/api/quotations/**,/api/contracts/**
+        - id: logistics-service
+          uri: ${LOGISTICS_SERVICE_URL:http://localhost:8085}
+          predicates:
+            - Path=/api/deliveries/**,/api/returns/**
+        - id: billing-service
+          uri: ${BILLING_SERVICE_URL:http://localhost:8086}
+          predicates:
+            - Path=/api/invoices/**,/api/payments/**,/api/deposits/**
+        - id: maintenance-service
+          uri: ${MAINTENANCE_SERVICE_URL:http://localhost:8087}
+          predicates:
+            - Path=/api/maintenance/**,/api/repairs/**,/api/incidents/**
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
