@@ -2,6 +2,8 @@ package com.equipmentrental.identity.config;
 
 import com.equipmentrental.identity.entity.Role;
 import com.equipmentrental.identity.repository.RoleRepository;
+import com.equipmentrental.identity.repository.UserRepository;
+import java.util.Map;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,8 +14,11 @@ public class RoleDataInitializer {
 
     @Bean
     @Order(1)
-    ApplicationRunner initialRoleData(RoleRepository roleRepository) {
-        return arguments -> seedInitialRoles(roleRepository);
+    ApplicationRunner initialRoleData(RoleRepository roleRepository, UserRepository userRepository) {
+        return arguments -> {
+            seedInitialRoles(roleRepository);
+            migrateLegacyRoles(roleRepository, userRepository);
+        };
     }
 
     void seedInitialRoles(RoleRepository roleRepository) {
@@ -31,15 +36,31 @@ public class RoleDataInitializer {
         }
     }
 
+    private void migrateLegacyRoles(RoleRepository roleRepository, UserRepository userRepository) {
+        for (Map.Entry<String, String> migration : LEGACY_ROLE_MAPPINGS.entrySet()) {
+            roleRepository.findByCode(migration.getKey()).ifPresent(legacyRole -> {
+                Role replacementRole = roleRepository.findByCode(migration.getValue()).orElseThrow();
+                userRepository.reassignRole(legacyRole.getCode(), replacementRole);
+                roleRepository.delete(legacyRole);
+            });
+        }
+    }
+
+    private static final Map<String, String> LEGACY_ROLE_MAPPINGS = Map.of(
+            "SUPER_ADMIN", "ADMIN",
+            "ORG_ADMIN", "ADMIN",
+            "BRANCH_MANAGER", "MANAGER",
+            "WAREHOUSE_STAFF", "OPERATIONS_STAFF",
+            "DELIVERY_STAFF", "OPERATIONS_STAFF",
+            "TECHNICIAN", "OPERATIONS_STAFF"
+    );
+
     private enum InitialRole {
-        SUPER_ADMIN("SUPER_ADMIN", "Super Administrator", "Quản trị toàn hệ thống"),
-        ORG_ADMIN("ORG_ADMIN", "Organization Administrator", "Quản trị doanh nghiệp"),
-        BRANCH_MANAGER("BRANCH_MANAGER", "Branch Manager", "Quản lý chi nhánh"),
+        ADMIN("ADMIN", "Administrator", "Quản trị doanh nghiệp và hệ thống demo"),
+        MANAGER("MANAGER", "Manager", "Quản lý chi nhánh"),
         SALES_STAFF("SALES_STAFF", "Sales Staff", "Nhân viên kinh doanh"),
-        WAREHOUSE_STAFF("WAREHOUSE_STAFF", "Warehouse Staff", "Nhân viên kho"),
-        DELIVERY_STAFF("DELIVERY_STAFF", "Delivery Staff", "Nhân viên giao nhận"),
+        OPERATIONS_STAFF("OPERATIONS_STAFF", "Operations Staff", "Nhân viên vận hành, kho, giao nhận và kỹ thuật"),
         ACCOUNTANT("ACCOUNTANT", "Accountant", "Kế toán"),
-        TECHNICIAN("TECHNICIAN", "Technician", "Kỹ thuật viên"),
         CUSTOMER("CUSTOMER", "Customer", "Khách hàng");
 
         private final String code;

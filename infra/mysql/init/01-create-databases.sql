@@ -1,30 +1,8 @@
--- Schema khởi tạo đầy đủ cho môi trường mới. Không có foreign key xuyên database/service.
---
--- Phạm vi đã cập nhật bởi phần Identity và Rental:
--- - identity_db: roles, permissions, users, user_branch_assignments,
---   role_permissions, user_sessions, verification_codes, password_history, audit_logs.
--- - rental_db: rental_prices, discount_codes, rental_requests,
---   rental_request_items, quotations, rental_orders (bao gồm inventory_reservation_id),
---   rental_contracts và contract_appendices.
---
--- Khi tạo database mới, chạy file này. Với database Rental đã tồn tại trước
--- 2026-08-04, chạy thêm migrations/20260804_02_identity_rental_completion.sql
--- một lần; không chạy migration đó trên database mới vì các cột/bảng đã có ở đây.
+
 CREATE DATABASE IF NOT EXISTS identity_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
--- =====================================================
--- DATABASE QUẢN LÝ TÀI KHOẢN VÀ PHÂN QUYỀN
--- Dùng cho identity-service / auth-service
--- Chỉ đăng ký và đăng nhập bằng Gmail
--- Mỗi người dùng chỉ có một vai trò
--- =====================================================
+
 
 USE identity_db;
-
--- =====================================================
--- 1. BẢNG VAI TRÒ
--- Phải tạo trước bảng users vì users có role_id
--- =====================================================
-
 CREATE TABLE IF NOT EXISTS roles (
                        id BIGINT AUTO_INCREMENT PRIMARY KEY,
 

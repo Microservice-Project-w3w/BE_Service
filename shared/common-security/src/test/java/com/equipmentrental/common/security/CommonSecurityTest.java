@@ -14,10 +14,10 @@ class CommonSecurityTest {
     @Test
     void convertsPermissionsAndPrefixesRolesOnlyOnce() {
         Jwt jwt = jwtWithClaims("permissions", List.of("rental.quotation.approve", "rental.quotation.approve"),
-                "roles", List.of("SUPER_ADMIN", "ROLE_ORG_ADMIN"));
+                "roles", List.of("ADMIN", "ROLE_MANAGER"));
 
         assertThat(converter.convert(jwt)).extracting(authority -> authority.getAuthority())
-                .containsExactlyInAnyOrder("rental.quotation.approve", "ROLE_SUPER_ADMIN", "ROLE_ORG_ADMIN");
+                .containsExactlyInAnyOrder("rental.quotation.approve", "ROLE_ADMIN", "ROLE_MANAGER");
     }
 
     @Test
@@ -28,12 +28,12 @@ class CommonSecurityTest {
     }
 
     @Test
-    void deniesOtherOrganizationAndAllowsSuperAdmin() {
-        CurrentUser organizationUser = new CurrentUser("user-1", "name", 10L, Set.of(3L), Set.of("ORG_ADMIN"), Set.of(), "session");
-        CurrentUser superAdmin = new CurrentUser("user-2", "name", 10L, Set.of(), Set.of("SUPER_ADMIN"), Set.of(), "session");
+    void deniesOtherOrganizationAndAllowsAdmin() {
+        CurrentUser organizationUser = new CurrentUser("user-1", "name", 10L, Set.of(3L), Set.of("MANAGER"), Set.of(), "session");
+        CurrentUser admin = new CurrentUser("user-2", "name", 10L, Set.of(), Set.of("ADMIN"), Set.of(), "session");
 
         assertThat(authorizer.canAccessOrganization(organizationUser, 11L)).isFalse();
-        assertThat(authorizer.canAccessOrganization(superAdmin, 11L)).isTrue();
+        assertThat(authorizer.canAccessOrganization(admin, 11L)).isTrue();
     }
 
     @Test

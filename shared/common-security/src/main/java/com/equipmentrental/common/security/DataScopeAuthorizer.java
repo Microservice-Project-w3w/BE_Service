@@ -6,24 +6,24 @@ public class DataScopeAuthorizer {
         if (user == null || organizationId == null) {
             return false;
         }
-        return isSuperAdmin(user) || organizationId.equals(user.organizationId());
+        return isAdmin(user) || organizationId.equals(user.organizationId());
     }
 
     public boolean canAccessBranch(CurrentUser user, Long organizationId, Long branchId) {
         if (user == null || organizationId == null || branchId == null) {
             return false;
         }
-        return isSuperAdmin(user) || (canAccessOrganization(user, organizationId) && user.branchIds().contains(branchId));
+        return isAdmin(user) || (canAccessOrganization(user, organizationId) && user.branchIds().contains(branchId));
     }
 
     public boolean canAccessOwner(CurrentUser user, String ownerUserId) {
         if (user == null || ownerUserId == null || ownerUserId.isBlank()) {
             return false;
         }
-        return isSuperAdmin(user) || ownerUserId.equals(user.userId());
+        return isAdmin(user) || ownerUserId.equals(user.userId());
     }
 
-    private boolean isSuperAdmin(CurrentUser user) {
-        return user.roles().contains("SUPER_ADMIN") || user.roles().contains("ROLE_SUPER_ADMIN");
+    private boolean isAdmin(CurrentUser user) {
+        return user.roles().contains("ADMIN") || user.roles().contains("ROLE_ADMIN");
     }
 }
