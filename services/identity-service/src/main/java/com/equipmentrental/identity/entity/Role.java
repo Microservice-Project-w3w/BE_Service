@@ -3,6 +3,8 @@ package com.equipmentrental.identity.entity;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Entity
 @Table(
@@ -52,6 +54,9 @@ public class Role {
     )
     private boolean active;
 
+    @OneToMany(mappedBy = "role", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    private Set<RolePermission> rolePermissions = new LinkedHashSet<>();
+
     @Column(
             name = "created_at",
             nullable = false
@@ -65,6 +70,14 @@ public class Role {
     private LocalDateTime updatedAt;
 
     protected Role() {
+    }
+
+    public Role(String code, String name, String description, boolean systemRole, boolean active) {
+        this.code = code;
+        this.name = name;
+        this.description = description;
+        this.systemRole = systemRole;
+        this.active = active;
     }
 
     @PrePersist
@@ -113,6 +126,39 @@ public class Role {
 
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
+    }
+
+    public Set<Permission> getPermissions() {
+        return rolePermissions.stream()
+                .map(RolePermission::getPermission)
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+    }
+
+    public Set<RolePermission> getRolePermissions() {
+        return Set.copyOf(rolePermissions);
+    }
+
+    public void replaceRolePermissions(Set<RolePermission> permissions) {
+        if (permissions == null) {
+            rolePermissions.clear();
+            return;
+        }
+
+        rolePermissions.removeIf(existing -> permissions.stream()
+                .noneMatch(newPerm -> newPerm.getPermission().getCode().equals(existing.getPermission().getCode())));
+
+        for (RolePermission newPerm : permissions) {
+            java.util.Optional<RolePermission> existingPermOpt = rolePermissions.stream()
+                    .filter(existing -> existing.getPermission().getCode().equals(newPerm.getPermission().getCode()))
+                    .findFirst();
+
+            if (existingPermOpt.isPresent()) {
+                existingPermOpt.get().setDataScope(newPerm.getDataScope());
+            } else {
+                newPerm.setRole(this);
+                rolePermissions.add(newPerm);
+            }
+        }
     }
 
     public void setCode(String code) {

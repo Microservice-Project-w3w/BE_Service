@@ -7,6 +7,8 @@ import com.equipmentrental.identity.dto.auth.RegisterResponse;
 import com.equipmentrental.identity.entity.Role;
 import com.equipmentrental.identity.entity.User;
 import com.equipmentrental.identity.entity.UserStatus;
+import com.equipmentrental.identity.entity.PasswordHistory;
+import com.equipmentrental.identity.repository.PasswordHistoryRepository;
 import com.equipmentrental.identity.repository.RoleRepository;
 import com.equipmentrental.identity.repository.UserRepository;
 import com.equipmentrental.identity.security.JwtService;
@@ -18,6 +20,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.Locale;
+import org.springframework.security.oauth2.jwt.Jwt;
 
 @Service
 public class AuthService {
@@ -30,17 +33,26 @@ public class AuthService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final SessionService sessionService;
+    private final VerificationService verificationService;
+    private final PasswordHistoryRepository passwordHistoryRepository;
 
     public AuthService(
             UserRepository userRepository,
             RoleRepository roleRepository,
             PasswordEncoder passwordEncoder,
-            JwtService jwtService
+            JwtService jwtService,
+            SessionService sessionService,
+            VerificationService verificationService,
+            PasswordHistoryRepository passwordHistoryRepository
     ) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.sessionService = sessionService;
+        this.verificationService = verificationService;
+        this.passwordHistoryRepository = passwordHistoryRepository;
     }
 
     @Transactional
@@ -100,16 +112,20 @@ public class AuthService {
         user.setUpdatedBy(null);
 
         User savedUser = userRepository.save(user);
+        passwordHistoryRepository.save(new PasswordHistory(savedUser, savedUser.getPasswordHash(), "REGISTER"));
 
+        String verificationCode = verificationService.issue(savedUser, VerificationService.PURPOSE_VERIFY_EMAIL);
         return new RegisterResponse(
                 savedUser.getId(),
                 savedUser.getEmail(),
                 savedUser.getStatus().name(),
-                "Đăng ký thành công. Vui lòng xác minh Gmail."
+                "Đăng ký thành công. Vui lòng xác minh Gmail.",
+                verificationCode
         );
     }
 
-    public AuthResponse login(LoginRequest request) {
+    @Transactional
+    public AuthResponse login(LoginRequest request, String deviceName, String deviceType, String ipAddress, String userAgent) {
         String normalizedEmail = normalizeEmail(request.email());
 
         User user = userRepository
@@ -164,18 +180,91 @@ public class AuthService {
 
         userRepository.save(user);
 
-        String accessToken =
-                jwtService.generateAccessToken(user);
+        return issueTokens(user, sessionService.create(user, deviceName, deviceType, ipAddress, userAgent));
+    }
 
-        return new AuthResponse(
-                accessToken,
-                "Bearer",
-                jwtService.getExpiresInSeconds(),
-                user.getId(),
-                user.getEmail(),
-                user.getFullName(),
-                user.getRole().getCode()
-        );
+    @Transactional
+    public AuthResponse refresh(String refreshToken) {
+        SessionService.IssuedSession issued = sessionService.rotate(refreshToken);
+        User user = userRepository.findDetailedById(issued.session().getUser().getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Tài khoản không tồn tại"));
+        if (user.getStatus() != UserStatus.ACTIVE || !user.isEmailVerified()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tài khoản không hoạt động");
+        }
+        return issueTokens(user, issued);
+    }
+
+    @Transactional
+    public void logout(Jwt jwt) {
+        if (jwt == null) {
+            return;
+        }
+        String sessionId = jwt.getClaimAsString("sessionId");
+        if (sessionId == null || sessionId.isBlank()) {
+            return;
+        }
+        try {
+            sessionService.revoke(Long.valueOf(sessionId), "LOGOUT");
+        } catch (NumberFormatException ignored) {
+            // Older access tokens without a session id are stateless and simply expire.
+        }
+    }
+
+    @Transactional
+    public void verifyEmail(String email, String code) {
+        User user = verificationService.verify(normalizeEmail(email), VerificationService.PURPOSE_VERIFY_EMAIL, code);
+        user.setEmailVerified(true);
+        user.setStatus(UserStatus.ACTIVE);
+        user.setFailedLoginAttempts(0);
+        user.setLockedUntil(null);
+        userRepository.save(user);
+    }
+
+    @Transactional
+    public String requestPasswordReset(String email) {
+        return userRepository.findByEmailIgnoreCase(normalizeEmail(email))
+                .map(user -> verificationService.issue(user, VerificationService.PURPOSE_RESET_PASSWORD))
+                .orElse(null);
+    }
+
+    @Transactional
+    public String requestEmailVerification(String email) {
+        return userRepository.findByEmailIgnoreCase(normalizeEmail(email))
+                .map(user -> verificationService.issue(user, VerificationService.PURPOSE_VERIFY_EMAIL))
+                .orElse(null);
+    }
+
+    @Transactional
+    public void resetPassword(String email, String code, String newPassword) {
+        User user = verificationService.verify(normalizeEmail(email), VerificationService.PURPOSE_RESET_PASSWORD, code);
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        user.setFailedLoginAttempts(0);
+        user.setLockedUntil(null);
+        if (user.isEmailVerified()) {
+            user.setStatus(UserStatus.ACTIVE);
+        }
+        userRepository.save(user);
+        passwordHistoryRepository.save(new PasswordHistory(user, user.getPasswordHash(), "RESET_PASSWORD"));
+        sessionService.revokeAllForUser(user.getId(), "PASSWORD_RESET");
+    }
+
+    @Transactional
+    public void changePassword(Long userId, String currentPassword, String newPassword) {
+        User user = userRepository.findDetailedById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Tài khoản không tồn tại"));
+        if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mật khẩu hiện tại không chính xác");
+        }
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        passwordHistoryRepository.save(new PasswordHistory(user, user.getPasswordHash(), "USER_CHANGE"));
+        sessionService.revokeAllForUser(user.getId(), "PASSWORD_CHANGED");
+    }
+
+    private AuthResponse issueTokens(User user, SessionService.IssuedSession issued) {
+        return new AuthResponse(jwtService.generateAccessToken(user, issued.session().getId()), "Bearer",
+                jwtService.getExpiresInSeconds(), issued.refreshToken(), user.getId(), user.getEmail(), user.getFullName(),
+                user.getRole().getCode());
     }
 
     private void handleFailedLogin(User user) {
