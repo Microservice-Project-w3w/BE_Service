@@ -120,6 +120,29 @@ public class Role {
         return active;
     }
 
+    public Set<RolePermission> getRolePermissions() {
+        return Set.copyOf(rolePermissions);
+    }
+
+    public Set<Permission> getPermissions() {
+        Set<Permission> permissions = new LinkedHashSet<>();
+        for (RolePermission rolePermission : rolePermissions) {
+            permissions.add(rolePermission.getPermission());
+        }
+        return permissions;
+    }
+
+    public void replaceRolePermissions(Set<RolePermission> permissions) {
+        rolePermissions.clear();
+        if (permissions == null) {
+            return;
+        }
+        for (RolePermission permission : permissions) {
+            permission.setRole(this);
+            rolePermissions.add(permission);
+        }
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
