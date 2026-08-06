@@ -128,40 +128,6 @@ public class Role {
         return updatedAt;
     }
 
-    public Set<Permission> getPermissions() {
-        return rolePermissions.stream()
-                .map(RolePermission::getPermission)
-                .collect(java.util.stream.Collectors.toUnmodifiableSet());
-    }
-
-    public Set<RolePermission> getRolePermissions() {
-        return Set.copyOf(rolePermissions);
-    }
-
-    public void replaceRolePermissions(Set<RolePermission> permissions) {
-        if (permissions == null) {
-            rolePermissions.clear();
-            return;
-        }
-
-        // Remove permissions that are not in the new set
-        rolePermissions.removeIf(existing -> permissions.stream()
-                .noneMatch(p -> p.getPermission().getCode().equals(existing.getPermission().getCode())));
-
-        for (RolePermission permission : permissions) {
-            rolePermissions.stream()
-                    .filter(existing -> existing.getPermission().getCode().equals(permission.getPermission().getCode()))
-                    .findFirst()
-                    .ifPresentOrElse(
-                            existing -> existing.setDataScope(permission.getDataScope()),
-                            () -> {
-                                permission.setRole(this);
-                                rolePermissions.add(permission);
-                            }
-                    );
-        }
-    }
-
     public void setCode(String code) {
         this.code = code;
     }
