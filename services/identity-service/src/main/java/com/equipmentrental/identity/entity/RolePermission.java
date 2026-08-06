@@ -60,4 +60,8 @@ public class RolePermission {
     public void setRole(Role role) {
         this.role = role;
     }
+
+    public void setDataScope(DataScope dataScope) {
+        this.dataScope = dataScope;
+    }
 }
