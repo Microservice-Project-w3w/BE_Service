@@ -128,27 +128,6 @@ public class Role {
         return updatedAt;
     }
 
-    public Set<Permission> getPermissions() {
-        return rolePermissions.stream()
-                .map(RolePermission::getPermission)
-                .collect(java.util.stream.Collectors.toUnmodifiableSet());
-    }
-
-    public Set<RolePermission> getRolePermissions() {
-        return Set.copyOf(rolePermissions);
-    }
-
-    public void replaceRolePermissions(Set<RolePermission> permissions) {
-        rolePermissions.clear();
-        if (permissions == null) {
-            return;
-        }
-        for (RolePermission permission : permissions) {
-            permission.setRole(this);
-            rolePermissions.add(permission);
-        }
-    }
-
     public void setCode(String code) {
         this.code = code;
     }

@@ -26,7 +26,7 @@ security:
   jwt:
     issuer: ${JWT_ISSUER:identity-service}
     access-token-minutes: ${JWT_ACCESS_TOKEN_MINUTES:15}
-    secret-base64: ${JWT_SECRET_BASE64}
+    secret-base64: ${JWT_SECRET_BASE64:VGhpc0lzTXlTdXBlclNlY3JldEtleUZvckp3dDIwMjQhISE=}
 
 app:
   auth:

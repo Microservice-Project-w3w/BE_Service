@@ -124,6 +124,7 @@ public class AuthService {
         );
     }
 
+    @Transactional
     public AuthResponse login(LoginRequest request, String deviceName, String deviceType, String ipAddress, String userAgent) {
         String normalizedEmail = normalizeEmail(request.email());
 
@@ -182,6 +183,7 @@ public class AuthService {
         return issueTokens(user, sessionService.create(user, deviceName, deviceType, ipAddress, userAgent));
     }
 
+    @Transactional
     public AuthResponse refresh(String refreshToken) {
         SessionService.IssuedSession issued = sessionService.rotate(refreshToken);
         User user = userRepository.findDetailedById(issued.session().getUser().getId())
@@ -192,6 +194,7 @@ public class AuthService {
         return issueTokens(user, issued);
     }
 
+    @Transactional
     public void logout(Jwt jwt) {
         if (jwt == null) {
             return;
@@ -207,6 +210,7 @@ public class AuthService {
         }
     }
 
+    @Transactional
     public void verifyEmail(String email, String code) {
         User user = verificationService.verify(normalizeEmail(email), VerificationService.PURPOSE_VERIFY_EMAIL, code);
         user.setEmailVerified(true);
@@ -216,18 +220,21 @@ public class AuthService {
         userRepository.save(user);
     }
 
+    @Transactional
     public String requestPasswordReset(String email) {
         return userRepository.findByEmailIgnoreCase(normalizeEmail(email))
                 .map(user -> verificationService.issue(user, VerificationService.PURPOSE_RESET_PASSWORD))
                 .orElse(null);
     }
 
+    @Transactional
     public String requestEmailVerification(String email) {
         return userRepository.findByEmailIgnoreCase(normalizeEmail(email))
                 .map(user -> verificationService.issue(user, VerificationService.PURPOSE_VERIFY_EMAIL))
                 .orElse(null);
     }
 
+    @Transactional
     public void resetPassword(String email, String code, String newPassword) {
         User user = verificationService.verify(normalizeEmail(email), VerificationService.PURPOSE_RESET_PASSWORD, code);
         user.setPasswordHash(passwordEncoder.encode(newPassword));
@@ -241,6 +248,7 @@ public class AuthService {
         sessionService.revokeAllForUser(user.getId(), "PASSWORD_RESET");
     }
 
+    @Transactional
     public void changePassword(Long userId, String currentPassword, String newPassword) {
         User user = userRepository.findDetailedById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Tài khoản không tồn tại"));

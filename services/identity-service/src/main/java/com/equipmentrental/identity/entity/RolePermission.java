@@ -57,6 +57,10 @@ public class RolePermission {
         return dataScope;
     }
 
+    public void setDataScope(DataScope dataScope) {
+        this.dataScope = dataScope;
+    }
+
     public void setRole(Role role) {
         this.role = role;
     }
