@@ -19,7 +19,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.io.ClassPathResource;
-
+import com.equipmentrental.identity.repository.RolePermissionRepository;
 @Configuration
 public class PermissionDataInitializer {
 
@@ -30,11 +30,12 @@ public class PermissionDataInitializer {
     @Order(2)
     ApplicationRunner initialPermissionData(
             PermissionRepository permissionRepository,
-            RoleRepository roleRepository
+            RoleRepository roleRepository,
+            RolePermissionRepository rolePermissionRepository
     ) {
         return arguments -> {
             Map<String, Permission> permissions = seedPermissions(permissionRepository);
-            seedRolePermissions(roleRepository, permissions);
+            seedRolePermissions(roleRepository, permissions,  rolePermissionRepository);
         };
     }
 
@@ -54,7 +55,7 @@ public class PermissionDataInitializer {
         return result;
     }
 
-    private void seedRolePermissions(RoleRepository roleRepository, Map<String, Permission> permissions) throws IOException {
+    private void seedRolePermissions(RoleRepository roleRepository, Map<String, Permission> permissions, RolePermissionRepository rolePermissionRepository) throws IOException {
         Map<String, Set<RolePermission>> assignments = new LinkedHashMap<>();
         forEachDataLine(ROLE_PERMISSION_SEED, line -> {
             String[] columns = line.split(",", 3);
@@ -71,9 +72,24 @@ public class PermissionDataInitializer {
                     .add(new RolePermission(role, permission, DataScope.valueOf(columns[2])));
         });
         assignments.forEach((roleCode, rolePermissions) -> {
-            Role role = roleRepository.findByCode(roleCode).orElseThrow();
-            role.replaceRolePermissions(rolePermissions);
-            roleRepository.save(role);
+
+            Role role = roleRepository
+                    .findByCode(roleCode)
+                    .orElseThrow();
+
+            rolePermissions.forEach(rolePermission -> {
+
+                boolean exists =
+                        rolePermissionRepository
+                                .existsByRoleIdAndPermissionId(
+                                        role.getId(),
+                                        rolePermission.getPermission().getId()
+                                );
+
+                if (!exists) {
+                    rolePermissionRepository.save(rolePermission);
+                }
+            });
         });
     }
 

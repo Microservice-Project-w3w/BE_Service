@@ -1,7 +1,5 @@
 package com.equipmentrental.identity.entity;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.stream.Collectors;
+
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
@@ -134,44 +132,26 @@ public class Role {
         return permissions;
     }
 
-    public void replaceRolePermissions(Set<RolePermission> newRolePermissions) {
-        if (newRolePermissions == null) {
+    public void replaceRolePermissions(Set<RolePermission> permissions) {
+        if (permissions == null) {
             rolePermissions.clear();
             return;
         }
 
-        Map<Long, RolePermission> requestedByPermissionId =
-                newRolePermissions.stream()
-                        .collect(Collectors.toMap(
-                                item -> item.getPermission().getId(),
-                                item -> item,
-                                (first, second) -> second,
-                                LinkedHashMap::new
-                        ));
+        rolePermissions.removeIf(existing -> permissions.stream()
+                .noneMatch(np -> np.getPermission().getCode().equals(existing.getPermission().getCode())));
 
-        rolePermissions.removeIf(existing ->
-                !requestedByPermissionId.containsKey(
-                        existing.getPermission().getId()
-                )
-        );
-
-        for (RolePermission requested : requestedByPermissionId.values()) {
+        for (RolePermission newPerm : permissions) {
             RolePermission existing = rolePermissions.stream()
-                    .filter(item ->
-                            item.getPermission()
-                                    .getId()
-                                    .equals(
-                                            requested.getPermission().getId()
-                                    )
-                    )
+                    .filter(e -> e.getPermission().getCode().equals(newPerm.getPermission().getCode()))
                     .findFirst()
                     .orElse(null);
 
             if (existing != null) {
-                existing.setDataScope(requested.getDataScope());
+                existing.setDataScope(newPerm.getDataScope());
             } else {
-                requested.setRole(this);
-                rolePermissions.add(requested);
+                newPerm.setRole(this);
+                rolePermissions.add(newPerm);
             }
         }
     }

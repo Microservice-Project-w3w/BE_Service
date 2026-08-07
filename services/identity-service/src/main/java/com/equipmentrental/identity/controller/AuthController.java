@@ -95,12 +95,20 @@ public class AuthController {
         return ApiResponse.success(response);
     }
 
-    @PostMapping("/password-reset/confirm")
-    public ApiResponse<Void> confirmPasswordReset(@Valid @RequestBody ConfirmResetPasswordRequest request) {
-        authService.resetPassword(request.email(), request.code(), request.newPassword());
-        return ApiResponse.success(null, "Đặt lại mật khẩu thành công");
-    }
+    @PostMapping("/reset-password")
+    public ApiResponse<Void> resetPassword(
+            @Valid @RequestBody ConfirmResetPasswordRequest request
+    ){
+        authService.resetPassword(
+                request.email(),
+                request.newPassword()
+        );
 
+        return ApiResponse.success(
+                null,
+                "Đặt lại mật khẩu thành công"
+        );
+    }
     @PutMapping("/password")
     public ApiResponse<Void> changePassword(JwtAuthenticationToken authentication,
                                             @Valid @RequestBody ChangePasswordRequest request) {
