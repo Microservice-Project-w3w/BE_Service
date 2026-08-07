@@ -48,6 +48,9 @@ public class RolePermission {
         this.permission = permission;
         this.dataScope = dataScope;
     }
+    public Long getId() {return id;}
+
+    public Role getRole() {return role;}
 
     public Permission getPermission() {
         return permission;
@@ -64,8 +67,5 @@ public class RolePermission {
     public void setRole(Role role) {
         this.role = role;
     }
-
-    public void setDataScope(DataScope dataScope) {
-        this.dataScope = dataScope;
     }
-}
+

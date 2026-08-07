@@ -1,5 +1,7 @@
 package com.equipmentrental.identity.entity;
-
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
@@ -132,14 +134,45 @@ public class Role {
         return permissions;
     }
 
-    public void replaceRolePermissions(Set<RolePermission> permissions) {
-        rolePermissions.clear();
-        if (permissions == null) {
+    public void replaceRolePermissions(Set<RolePermission> newRolePermissions) {
+        if (newRolePermissions == null) {
+            rolePermissions.clear();
             return;
         }
-        for (RolePermission permission : permissions) {
-            permission.setRole(this);
-            rolePermissions.add(permission);
+
+        Map<Long, RolePermission> requestedByPermissionId =
+                newRolePermissions.stream()
+                        .collect(Collectors.toMap(
+                                item -> item.getPermission().getId(),
+                                item -> item,
+                                (first, second) -> second,
+                                LinkedHashMap::new
+                        ));
+
+        rolePermissions.removeIf(existing ->
+                !requestedByPermissionId.containsKey(
+                        existing.getPermission().getId()
+                )
+        );
+
+        for (RolePermission requested : requestedByPermissionId.values()) {
+            RolePermission existing = rolePermissions.stream()
+                    .filter(item ->
+                            item.getPermission()
+                                    .getId()
+                                    .equals(
+                                            requested.getPermission().getId()
+                                    )
+                    )
+                    .findFirst()
+                    .orElse(null);
+
+            if (existing != null) {
+                existing.setDataScope(requested.getDataScope());
+            } else {
+                requested.setRole(this);
+                rolePermissions.add(requested);
+            }
         }
     }
 

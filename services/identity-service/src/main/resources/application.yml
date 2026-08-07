@@ -30,4 +30,4 @@ security:
 
 app:
   auth:
-    expose-verification-code: ${AUTH_EXPOSE_VERIFICATION_CODE:false}
+    expose-verification-code: ${AUTH_EXPOSE_VERIFICATION_CODE:true}
