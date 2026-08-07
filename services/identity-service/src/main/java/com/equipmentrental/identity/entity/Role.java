@@ -133,13 +133,28 @@ public class Role {
     }
 
     public void replaceRolePermissions(Set<RolePermission> permissions) {
-        rolePermissions.clear();
         if (permissions == null) {
+            rolePermissions.clear();
             return;
         }
-        for (RolePermission permission : permissions) {
-            permission.setRole(this);
-            rolePermissions.add(permission);
+
+        // Remove permissions that are not in the new set
+        rolePermissions.removeIf(existing -> permissions.stream()
+                .noneMatch(np -> np.getPermission().getCode().equals(existing.getPermission().getCode())));
+
+        // Add or update permissions
+        for (RolePermission newPerm : permissions) {
+            RolePermission existing = rolePermissions.stream()
+                    .filter(e -> e.getPermission().getCode().equals(newPerm.getPermission().getCode()))
+                    .findFirst()
+                    .orElse(null);
+
+            if (existing != null) {
+                existing.setDataScope(newPerm.getDataScope());
+            } else {
+                newPerm.setRole(this);
+                rolePermissions.add(newPerm);
+            }
         }
     }
 

@@ -101,8 +101,8 @@ public class AuthService {
         /*
          * Tài khoản chưa được đăng nhập cho tới khi xác minh Gmail.
          */
-        user.setStatus(UserStatus.PENDING);
-        user.setEmailVerified(false);
+        user.setStatus(UserStatus.ACTIVE);
+        user.setEmailVerified(true);
         user.setFailedLoginAttempts(0);
 
         /*
@@ -114,13 +114,13 @@ public class AuthService {
         User savedUser = userRepository.save(user);
         passwordHistoryRepository.save(new PasswordHistory(savedUser, savedUser.getPasswordHash(), "REGISTER"));
 
-        String verificationCode = verificationService.issue(savedUser, VerificationService.PURPOSE_VERIFY_EMAIL);
+
         return new RegisterResponse(
                 savedUser.getId(),
                 savedUser.getEmail(),
                 savedUser.getStatus().name(),
-                "Đăng ký thành công. Vui lòng xác minh Gmail.",
-                verificationCode
+                "Đăng ký thành công.",
+                null
         );
     }
 
@@ -235,17 +235,42 @@ public class AuthService {
     }
 
     @Transactional
-    public void resetPassword(String email, String code, String newPassword) {
-        User user = verificationService.verify(normalizeEmail(email), VerificationService.PURPOSE_RESET_PASSWORD, code);
-        user.setPasswordHash(passwordEncoder.encode(newPassword));
+    public void resetPassword(
+            String email,
+            String newPassword
+    ) {
+
+        User user = userRepository
+                .findByEmailIgnoreCase(normalizeEmail(email))
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Không tìm thấy tài khoản"
+                        )
+                );
+
+        user.setPasswordHash(
+                passwordEncoder.encode(newPassword)
+        );
+
         user.setFailedLoginAttempts(0);
         user.setLockedUntil(null);
-        if (user.isEmailVerified()) {
-            user.setStatus(UserStatus.ACTIVE);
-        }
+        user.setStatus(UserStatus.ACTIVE);
+
         userRepository.save(user);
-        passwordHistoryRepository.save(new PasswordHistory(user, user.getPasswordHash(), "RESET_PASSWORD"));
-        sessionService.revokeAllForUser(user.getId(), "PASSWORD_RESET");
+
+        passwordHistoryRepository.save(
+                new PasswordHistory(
+                        user,
+                        user.getPasswordHash(),
+                        "RESET_PASSWORD"
+                )
+        );
+
+        sessionService.revokeAllForUser(
+                user.getId(),
+                "PASSWORD_RESET"
+        );
     }
 
     @Transactional
