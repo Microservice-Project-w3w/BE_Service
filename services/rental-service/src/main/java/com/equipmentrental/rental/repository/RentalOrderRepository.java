@@ -1,9 +1,9 @@
 package com.equipmentrental.rental.repository;
 
 import com.equipmentrental.rental.entity.*;
-import org.springframework.data.jpa.repository.JpaRepository;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface RentalOrderRepository extends JpaRepository<RentalOrder, Long> {
     List<RentalOrder> findByOrganizationIdAndBranchId(Long organizationId, Long branchId);

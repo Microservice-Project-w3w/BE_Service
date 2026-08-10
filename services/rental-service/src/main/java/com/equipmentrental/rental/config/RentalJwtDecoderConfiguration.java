@@ -1,7 +1,6 @@
 package com.equipmentrental.rental.config;
 
 import java.util.Base64;
-import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -17,8 +16,7 @@ public class RentalJwtDecoderConfiguration {
     @Bean
     public JwtDecoder jwtDecoder(
             @Value("${security.jwt.secret-base64}") String secretBase64,
-            @Value("${security.jwt.issuer}") String issuer
-    ) {
+            @Value("${security.jwt.issuer}") String issuer) {
         byte[] secret = decodeSecret(secretBase64);
         NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(new SecretKeySpec(secret, "HmacSHA256"))
                 .macAlgorithm(MacAlgorithm.HS256)

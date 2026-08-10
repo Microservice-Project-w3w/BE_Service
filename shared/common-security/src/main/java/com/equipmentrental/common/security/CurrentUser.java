@@ -11,8 +11,7 @@ public record CurrentUser(
         Set<Long> branchIds,
         Set<String> roles,
         Set<String> permissions,
-        String sessionId
-) {
+        String sessionId) {
     public CurrentUser {
         branchIds = immutableSet(branchIds);
         roles = immutableSet(roles);

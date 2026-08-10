@@ -13,23 +13,29 @@ class CommonSecurityTest {
 
     @Test
     void convertsPermissionsAndPrefixesRolesOnlyOnce() {
-        Jwt jwt = jwtWithClaims("permissions", List.of("rental.quotation.approve", "rental.quotation.approve"),
-                "roles", List.of("ADMIN", "ROLE_MANAGER"));
+        Jwt jwt = jwtWithClaims(
+                "permissions",
+                List.of("rental.quotation.approve", "rental.quotation.approve"),
+                "roles",
+                List.of("ADMIN", "ROLE_MANAGER"));
 
-        assertThat(converter.convert(jwt)).extracting(authority -> authority.getAuthority())
+        assertThat(converter.convert(jwt))
+                .extracting(authority -> authority.getAuthority())
                 .containsExactlyInAnyOrder("rental.quotation.approve", "ROLE_ADMIN", "ROLE_MANAGER");
     }
 
     @Test
     void convertsBranchIdsFromNumericAndStringClaims() {
-        CurrentUser user = new CurrentUserProvider().fromJwt(jwtWithClaims("branchIds", List.of(1, 2L, "3", "invalid")));
+        CurrentUser user =
+                new CurrentUserProvider().fromJwt(jwtWithClaims("branchIds", List.of(1, 2L, "3", "invalid")));
 
         assertThat(user.branchIds()).containsExactlyInAnyOrder(1L, 2L, 3L);
     }
 
     @Test
     void deniesOtherOrganizationAndAllowsAdmin() {
-        CurrentUser organizationUser = new CurrentUser("user-1", "name", 10L, Set.of(3L), Set.of("MANAGER"), Set.of(), "session");
+        CurrentUser organizationUser =
+                new CurrentUser("user-1", "name", 10L, Set.of(3L), Set.of("MANAGER"), Set.of(), "session");
         CurrentUser admin = new CurrentUser("user-2", "name", 10L, Set.of(), Set.of("ADMIN"), Set.of(), "session");
 
         assertThat(authorizer.canAccessOrganization(organizationUser, 11L)).isFalse();

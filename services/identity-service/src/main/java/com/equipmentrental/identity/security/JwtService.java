@@ -1,14 +1,13 @@
 package com.equipmentrental.identity.security;
 
 import com.equipmentrental.identity.entity.User;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.*;
 import org.springframework.stereotype.Service;
-
-import java.time.Duration;
-import java.time.Instant;
-import java.util.List;
 
 @Service
 public class JwtService {
@@ -20,8 +19,7 @@ public class JwtService {
     public JwtService(
             JwtEncoder jwtEncoder,
             @Value("${security.jwt.issuer}") String issuer,
-            @Value("${security.jwt.access-token-minutes}") long accessTokenMinutes
-    ) {
+            @Value("${security.jwt.access-token-minutes}") long accessTokenMinutes) {
         this.jwtEncoder = jwtEncoder;
         this.issuer = issuer;
         this.accessTokenMinutes = accessTokenMinutes;
@@ -29,9 +27,7 @@ public class JwtService {
 
     public String generateAccessToken(User user, Long sessionId) {
         Instant now = Instant.now();
-        Instant expiresAt = now.plus(
-                Duration.ofMinutes(accessTokenMinutes)
-        );
+        Instant expiresAt = now.plus(Duration.ofMinutes(accessTokenMinutes));
 
         JwtClaimsSet.Builder claims = JwtClaimsSet.builder()
                 .issuer(issuer)
@@ -41,14 +37,13 @@ public class JwtService {
                 .claim("preferred_username", user.getEmail())
                 .claim("username", user.getEmail())
                 .claim("userId", user.getId())
+                .claim("roles", List.of(user.getRole().getCode()))
                 .claim(
-                        "roles",
-                        List.of(user.getRole().getCode())
-                )
-                .claim("permissions", user.getRole().getPermissions().stream()
-                        .map(permission -> permission.getCode())
-                        .sorted()
-                        .toList())
+                        "permissions",
+                        user.getRole().getPermissions().stream()
+                                .map(permission -> permission.getCode())
+                                .sorted()
+                                .toList())
                 .claim("branchIds", user.getBranchIds());
 
         if (sessionId != null) {
@@ -59,21 +54,14 @@ public class JwtService {
             claims.claim("organizationId", user.getOrganizationId());
         }
 
-        JwsHeader header = JwsHeader
-                .with(MacAlgorithm.HS256)
-                .build();
+        JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
 
-        JwtEncoderParameters parameters =
-                JwtEncoderParameters.from(header, claims.build());
+        JwtEncoderParameters parameters = JwtEncoderParameters.from(header, claims.build());
 
-        return jwtEncoder
-                .encode(parameters)
-                .getTokenValue();
+        return jwtEncoder.encode(parameters).getTokenValue();
     }
 
     public long getExpiresInSeconds() {
-        return Duration
-                .ofMinutes(accessTokenMinutes)
-                .toSeconds();
+        return Duration.ofMinutes(accessTokenMinutes).toSeconds();
     }
 }

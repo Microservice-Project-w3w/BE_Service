@@ -22,8 +22,10 @@ public class VerificationService {
     private final PasswordEncoder passwordEncoder;
     private final boolean exposeCode;
 
-    public VerificationService(VerificationCodeRepository repository, PasswordEncoder passwordEncoder,
-                               @Value("${app.auth.expose-verification-code:false}") boolean exposeCode) {
+    public VerificationService(
+            VerificationCodeRepository repository,
+            PasswordEncoder passwordEncoder,
+            @Value("${app.auth.expose-verification-code:false}") boolean exposeCode) {
         this.repository = repository;
         this.passwordEncoder = passwordEncoder;
         this.exposeCode = exposeCode;
@@ -31,17 +33,25 @@ public class VerificationService {
 
     public String issue(User user, String purpose) {
         String code = String.format("%06d", RANDOM.nextInt(1_000_000));
-        repository.save(new VerificationCode(user, user.getEmail(), purpose, passwordEncoder.encode(code),
+        repository.save(new VerificationCode(
+                user,
+                user.getEmail(),
+                purpose,
+                passwordEncoder.encode(code),
                 LocalDateTime.now().plusMinutes(15)));
-        // Email provider will consume this code in a later integration. It is exposed only when explicitly enabled for local testing.
+        // Email provider will consume this code in a later integration. It is exposed only when explicitly enabled for
+        // local testing.
         return exposeCode ? code : null;
     }
 
     public User verify(String email, String purpose, String code) {
-        VerificationCode verification = repository.findFirstByEmailAndPurposeAndUsedAtIsNullOrderByCreatedAtDesc(email, purpose)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.AUTH_TOKEN_INVALID, "Mã xác minh không tồn tại"));
+        VerificationCode verification = repository
+                .findFirstByEmailAndPurposeAndUsedAtIsNullOrderByCreatedAtDesc(email, purpose)
+                .orElseThrow(
+                        () -> new BusinessException(CommonErrorCode.AUTH_TOKEN_INVALID, "Mã xác minh không tồn tại"));
         if (!verification.canUse()) {
-            throw new BusinessException(CommonErrorCode.AUTH_TOKEN_EXPIRED, "Mã xác minh đã hết hạn hoặc vượt quá số lần thử");
+            throw new BusinessException(
+                    CommonErrorCode.AUTH_TOKEN_EXPIRED, "Mã xác minh đã hết hạn hoặc vượt quá số lần thử");
         }
         if (!passwordEncoder.matches(code, verification.getCodeHash())) {
             verification.recordAttempt();

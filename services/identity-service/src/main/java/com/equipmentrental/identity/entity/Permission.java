@@ -37,8 +37,7 @@ public class Permission {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    protected Permission() {
-    }
+    protected Permission() {}
 
     public Permission(String code, String name, String domain, String description) {
         this.code = code;
@@ -63,12 +62,35 @@ public class Permission {
         return code;
     }
 
-    public Long getId() { return id; }
-    public String getName() { return name; }
-    public String getDomain() { return domain; }
-    public String getDescription() { return description; }
-    public void setCode(String value) { code = value; }
-    public void setName(String value) { name = value; }
-    public void setDomain(String value) { domain = value; }
-    public void setDescription(String value) { description = value; }
+    public Long getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getDomain() {
+        return domain;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setCode(String value) {
+        code = value;
+    }
+
+    public void setName(String value) {
+        name = value;
+    }
+
+    public void setDomain(String value) {
+        domain = value;
+    }
+
+    public void setDescription(String value) {
+        description = value;
+    }
 }

@@ -2,5 +2,4 @@ package com.equipmentrental.rental.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 
-public record CancelOrderRequest(@NotBlank String reason) {
-}
+public record CancelOrderRequest(@NotBlank String reason) {}

@@ -599,5 +599,346 @@ CREATE TABLE IF NOT EXISTS contract_appendices (
 );
 
 CREATE DATABASE IF NOT EXISTS logistics_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE logistics_db;
+
+
+-- =========================================================
+-- 1. CẤU HÌNH PHÍ GIAO NHẬN
+-- =========================================================
+CREATE TABLE delivery_fee_rules (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+    organization_id BIGINT NOT NULL,
+    branch_id BIGINT NULL,
+
+    name VARCHAR(100) NOT NULL,
+
+    base_fee DECIMAL(15,2) NOT NULL,
+    max_distance_km DECIMAL(10,2) NOT NULL,
+    extra_fee_per_km DECIMAL(15,2) NOT NULL,
+
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL DEFAULT NULL
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    INDEX idx_delivery_fee_org (organization_id),
+    INDEX idx_delivery_fee_branch (branch_id),
+    INDEX idx_delivery_fee_active (is_active)
+);
+
+
+-- =========================================================
+-- 2. NHIỆM VỤ / PHÂN CÔNG GIAO NHẬN
+-- =========================================================
+CREATE TABLE delivery_tasks (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+    rental_order_id BIGINT NOT NULL,
+
+    -- DELIVERY / RETURN_PICKUP
+    task_type VARCHAR(30) NOT NULL,
+
+    -- User ID lấy từ identity-service
+    delivery_staff_user_id BIGINT NOT NULL,
+
+    scheduled_at DATETIME NOT NULL,
+
+    -- PENDING / ASSIGNED / IN_PROGRESS / COMPLETED / CANCELLED
+    status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+
+    notes VARCHAR(1000),
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL DEFAULT NULL
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    INDEX idx_delivery_task_order (rental_order_id),
+    INDEX idx_delivery_task_staff (delivery_staff_user_id),
+    INDEX idx_delivery_task_schedule (scheduled_at),
+    INDEX idx_delivery_task_status (status)
+);
+
+
+-- =========================================================
+-- 3. PHIẾU XUẤT KHO / GIAO THIẾT BỊ
+-- =========================================================
+CREATE TABLE dispatch_notes (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+    dispatch_code VARCHAR(50) NOT NULL UNIQUE,
+
+    -- ID từ rental-service
+    rental_order_id BIGINT NOT NULL,
+
+    -- ID từ organization-customer-service
+    customer_id BIGINT NOT NULL,
+
+    -- FK nội bộ logistics-service
+    delivery_task_id BIGINT NOT NULL,
+
+    -- PREPARED / DISPATCHED / DELIVERED / CANCELLED
+    status VARCHAR(30) NOT NULL DEFAULT 'PREPARED',
+
+    prepared_at DATETIME NULL,
+    dispatched_at DATETIME NULL,
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL DEFAULT NULL
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_dispatch_note_task
+        FOREIGN KEY (delivery_task_id)
+        REFERENCES delivery_tasks(id),
+
+    INDEX idx_dispatch_order (rental_order_id),
+    INDEX idx_dispatch_customer (customer_id),
+    INDEX idx_dispatch_task (delivery_task_id),
+    INDEX idx_dispatch_status (status)
+);
+
+
+-- =========================================================
+-- 4. CHI TIẾT PHIẾU XUẤT
+-- =========================================================
+CREATE TABLE dispatch_note_items (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+    dispatch_note_id BIGINT NOT NULL,
+
+    -- ID thiết bị từ inventory-service
+    equipment_id BIGINT NOT NULL,
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_dispatch_item_note
+        FOREIGN KEY (dispatch_note_id)
+        REFERENCES dispatch_notes(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT uk_dispatch_equipment
+        UNIQUE (dispatch_note_id, equipment_id),
+
+    INDEX idx_dispatch_item_equipment (equipment_id)
+);
+
+
+-- =========================================================
+-- 5. BIÊN BẢN BÀN GIAO
+-- =========================================================
+CREATE TABLE handover_records (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+    dispatch_note_id BIGINT NOT NULL,
+
+    handover_time DATETIME NOT NULL,
+
+    receiver_name VARCHAR(100) NOT NULL,
+    receiver_phone VARCHAR(20) NOT NULL,
+
+    -- Chỉ lưu URL/object key, không lưu binary
+    customer_signature_url VARCHAR(1000),
+
+    confirmed_by_customer BOOLEAN NOT NULL DEFAULT FALSE,
+    confirmed_at DATETIME NULL,
+
+    notes VARCHAR(1000),
+
+    -- PENDING / COMPLETED / REJECTED / CANCELLED
+    status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL DEFAULT NULL
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_handover_dispatch
+        FOREIGN KEY (dispatch_note_id)
+        REFERENCES dispatch_notes(id),
+
+    INDEX idx_handover_dispatch (dispatch_note_id),
+    INDEX idx_handover_status (status)
+);
+
+
+-- =========================================================
+-- 6. ẢNH BÀN GIAO
+-- =========================================================
+CREATE TABLE handover_photos (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+    handover_record_id BIGINT NOT NULL,
+
+    -- URL hoặc object key
+    photo_url VARCHAR(1000) NOT NULL,
+
+    -- BEFORE_DELIVERY / EQUIPMENT / ACCESSORY /
+    -- CUSTOMER_RECEIVED / DAMAGE / OTHER
+    photo_type VARCHAR(30) NOT NULL,
+
+    sort_order INT NOT NULL DEFAULT 0,
+
+    -- ACTIVE / INACTIVE
+    status VARCHAR(30) NOT NULL DEFAULT 'ACTIVE',
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_photo_handover
+        FOREIGN KEY (handover_record_id)
+        REFERENCES handover_records(id)
+        ON DELETE CASCADE,
+
+    INDEX idx_handover_photo_record (handover_record_id)
+);
+
+
+-- =========================================================
+-- 7. CHECKLIST BÀN GIAO
+-- =========================================================
+CREATE TABLE handover_checklists (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+    handover_record_id BIGINT NOT NULL,
+
+    checkpoint_name VARCHAR(200) NOT NULL,
+
+    sort_order INT NOT NULL DEFAULT 0,
+
+    -- PENDING / CHECKED / FAILED
+    status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+
+    is_passed BOOLEAN NOT NULL DEFAULT FALSE,
+
+    remarks VARCHAR(500),
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_checklist_handover
+        FOREIGN KEY (handover_record_id)
+        REFERENCES handover_records(id)
+        ON DELETE CASCADE,
+
+    INDEX idx_checklist_handover (handover_record_id)
+);
+
+
+-- =========================================================
+-- 8. YÊU CẦU TRẢ THIẾT BỊ
+-- =========================================================
+CREATE TABLE return_requests (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+    -- ID từ rental-service
+    rental_order_id BIGINT NOT NULL,
+
+    -- ID từ organization-customer-service
+    customer_id BIGINT NOT NULL,
+
+    requested_return_date DATETIME NOT NULL,
+
+    reason VARCHAR(500),
+
+    -- Nếu logistics đến lấy tại địa chỉ khách
+    pickup_address VARCHAR(500),
+
+    -- PENDING / APPROVED / SCHEDULED /
+    -- IN_PROGRESS / COMPLETED / CANCELLED
+    status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL DEFAULT NULL
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    INDEX idx_return_request_order (rental_order_id),
+    INDEX idx_return_request_customer (customer_id),
+    INDEX idx_return_request_status (status),
+    INDEX idx_return_request_date (requested_return_date)
+);
+
+
+-- =========================================================
+-- 9. BIÊN BẢN NHẬN TRẢ
+-- =========================================================
+CREATE TABLE return_records (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+    return_request_id BIGINT NOT NULL,
+
+    -- ID từ rental-service
+    rental_order_id BIGINT NOT NULL,
+
+    -- User ID từ identity-service
+    inspector_staff_user_id BIGINT NOT NULL,
+
+    actual_return_time DATETIME NOT NULL,
+
+    -- Dữ liệu đầu vào chính thức cho Billing
+    is_late_return BOOLEAN NOT NULL DEFAULT FALSE,
+
+    -- Số phút trả trễ.
+    -- Logistics ghi nhận thời gian, Billing chịu trách nhiệm tính tiền.
+    late_minutes BIGINT NOT NULL DEFAULT 0,
+
+    -- Tổng quan của toàn bộ lần trả
+    missing_accessories_description VARCHAR(1000),
+    condition_damage_description VARCHAR(1000),
+
+    -- DRAFT / INSPECTED / CONFIRMED / COMPLETED / CANCELLED
+    status VARCHAR(30) NOT NULL DEFAULT 'DRAFT',
+
+    notes VARCHAR(1000),
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL DEFAULT NULL
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_return_record_request
+        FOREIGN KEY (return_request_id)
+        REFERENCES return_requests(id),
+
+    INDEX idx_return_record_request (return_request_id),
+    INDEX idx_return_record_order (rental_order_id),
+    INDEX idx_return_record_inspector (inspector_staff_user_id),
+    INDEX idx_return_record_status (status)
+);
+
+
+-- =========================================================
+-- 10. CHI TIẾT KIỂM TRA THIẾT BỊ KHI TRẢ
+-- =========================================================
+CREATE TABLE return_record_items (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+    return_record_id BIGINT NOT NULL,
+
+    -- ID từ inventory-service
+    equipment_id BIGINT NOT NULL,
+
+    -- GOOD / SCRATCHED / DAMAGED / BROKEN / MISSING
+    returned_condition VARCHAR(30) NOT NULL DEFAULT 'GOOD',
+
+    -- Dữ liệu phục vụ Maintenance
+    is_damaged BOOLEAN NOT NULL DEFAULT FALSE,
+    damage_description VARCHAR(1000),
+
+    -- Dữ liệu phục vụ Billing
+    is_missing_accessories BOOLEAN NOT NULL DEFAULT FALSE,
+    missing_accessories_description VARCHAR(1000),
+
+    notes VARCHAR(500),
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_return_item_record
+        FOREIGN KEY (return_record_id)
+        REFERENCES return_records(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT uk_return_equipment
+        UNIQUE (return_record_id, equipment_id),
+
+    INDEX idx_return_item_equipment (equipment_id),
+    INDEX idx_return_item_condition (returned_condition)
+);
 CREATE DATABASE IF NOT EXISTS billing_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE DATABASE IF NOT EXISTS maintenance_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

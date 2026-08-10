@@ -13,11 +13,8 @@ public class HealthController {
     private final int serverPort;
 
     public HealthController(
-            @Value("${spring.application.name:api-gateway}")
-            String serviceName,
-            @Value("${server.port:8080}")
-            int serverPort
-    ) {
+            @Value("${spring.application.name:api-gateway}") String serviceName,
+            @Value("${server.port:8080}") int serverPort) {
         this.serviceName = serviceName;
         this.serverPort = serverPort;
     }

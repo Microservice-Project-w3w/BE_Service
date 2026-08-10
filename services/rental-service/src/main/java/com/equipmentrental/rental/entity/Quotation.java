@@ -10,33 +10,47 @@ public class Quotation {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     @Column(nullable = false)
     private Long organizationId;
+
     @Column(nullable = false)
     private Long branchId;
+
     @Column(nullable = false, unique = true, length = 50)
     private String quotationCode;
+
     @Column(nullable = false)
     private Long rentalRequestId;
+
     @Column(nullable = false)
     private Long customerId;
+
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal rentalAmount;
+
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal depositAmount;
+
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal deliveryFee;
+
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal discountAmount;
+
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal totalAmount;
+
     @Column(length = 50)
     private String discountCode;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private QuotationStatus status = QuotationStatus.DRAFT;
+
     @Column(nullable = false)
     private LocalDateTime validUntil;
+
     @Column(length = 1000)
     private String specialTerms;
 

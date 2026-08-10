@@ -8,6 +8,5 @@ import jakarta.validation.constraints.NotNull;
 import java.util.List;
 
 public record RolePermissionRequest(@NotEmpty List<@Valid Entry> permissions) {
-    public record Entry(@NotBlank String permissionCode, @NotNull DataScope dataScope) {
-    }
+    public record Entry(@NotBlank String permissionCode, @NotNull DataScope dataScope) {}
 }

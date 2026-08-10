@@ -26,20 +26,16 @@ public class RoleDataInitializer {
             if (roleRepository.findByCode(initialRole.code()).isPresent()) {
                 continue;
             }
-            roleRepository.save(new Role(
-                    initialRole.code(),
-                    initialRole.displayName(),
-                    initialRole.description(),
-                    true,
-                    true
-            ));
+            roleRepository.save(
+                    new Role(initialRole.code(), initialRole.displayName(), initialRole.description(), true, true));
         }
     }
 
     private void migrateLegacyRoles(RoleRepository roleRepository, UserRepository userRepository) {
         for (Map.Entry<String, String> migration : LEGACY_ROLE_MAPPINGS.entrySet()) {
             roleRepository.findByCode(migration.getKey()).ifPresent(legacyRole -> {
-                Role replacementRole = roleRepository.findByCode(migration.getValue()).orElseThrow();
+                Role replacementRole =
+                        roleRepository.findByCode(migration.getValue()).orElseThrow();
                 userRepository.reassignRole(legacyRole.getCode(), replacementRole);
                 roleRepository.delete(legacyRole);
             });
@@ -52,8 +48,7 @@ public class RoleDataInitializer {
             "BRANCH_MANAGER", "MANAGER",
             "WAREHOUSE_STAFF", "OPERATIONS_STAFF",
             "DELIVERY_STAFF", "OPERATIONS_STAFF",
-            "TECHNICIAN", "OPERATIONS_STAFF"
-    );
+            "TECHNICIAN", "OPERATIONS_STAFF");
 
     private enum InitialRole {
         ADMIN("ADMIN", "Administrator", "Quản trị doanh nghiệp và hệ thống demo"),

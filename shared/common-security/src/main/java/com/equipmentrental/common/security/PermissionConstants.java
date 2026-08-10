@@ -7,6 +7,5 @@ public final class PermissionConstants {
     public static final String DELETE = "DELETE";
     public static final String APPROVE = "APPROVE";
 
-    private PermissionConstants() {
-    }
+    private PermissionConstants() {}
 }
