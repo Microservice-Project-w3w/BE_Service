@@ -4,6 +4,7 @@ import com.equipmentrental.logistics.dto.request.CreateDeliveryFeeRuleRequest;
 import com.equipmentrental.logistics.dto.response.DeliveryFeeRuleResponse;
 import com.equipmentrental.logistics.entity.DeliveryFeeRule;
 import com.equipmentrental.logistics.repository.DeliveryFeeRuleRepository;
+import com.equipmentrental.logistics.exception.ResourceNotFoundException;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
@@ -54,5 +55,60 @@ public class DeliveryFeeRuleService {
         res.setIsActive(rule.getIsActive());
 
         return res;
+    }
+
+    @Transactional(readOnly = true)
+    public DeliveryFeeRuleResponse getById(Long id) {
+
+        DeliveryFeeRule rule = repository.findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Delivery fee rule not found"
+                        )
+                );
+
+        return mapToResponse(rule);
+    }
+
+    @Transactional
+    public DeliveryFeeRuleResponse update(
+            Long id,
+            CreateDeliveryFeeRuleRequest request
+    ) {
+
+        DeliveryFeeRule rule = repository.findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Delivery fee rule not found"
+                        )
+                );
+
+        rule.setOrganizationId(request.getOrganizationId());
+        rule.setBranchId(request.getBranchId());
+        rule.setName(request.getName());
+        rule.setBaseFee(request.getBaseFee());
+        rule.setMaxDistanceKm(request.getMaxDistanceKm());
+        rule.setExtraFeePerKm(request.getExtraFeePerKm());
+        rule.setIsActive(request.getIsActive());
+
+        return mapToResponse(repository.save(rule));
+    }
+
+    @Transactional
+    public DeliveryFeeRuleResponse updateActive(
+            Long id,
+            boolean active
+    ) {
+
+        DeliveryFeeRule rule = repository.findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Delivery fee rule not found"
+                        )
+                );
+
+        rule.setIsActive(active);
+
+        return mapToResponse(repository.save(rule));
     }
 }

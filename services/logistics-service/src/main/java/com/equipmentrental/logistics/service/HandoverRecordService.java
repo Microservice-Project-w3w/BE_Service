@@ -234,4 +234,31 @@ public class HandoverRecordService {
 
         return repository.findAll().stream().map(this::mapToResponse).collect(Collectors.toList());
     }
+
+    @Transactional(readOnly = true)
+    public List<HandoverChecklistResponse> getChecklists(Long handoverRecordId) {
+
+        if (!repository.existsById(handoverRecordId)) {
+            throw new ResourceNotFoundException(
+                    "Handover Record not found: " + handoverRecordId
+            );
+        }
+
+        return checklistRepository.findByHandoverRecordId(handoverRecordId)
+                .stream()
+                .map(c -> {
+                    HandoverChecklistResponse res =
+                            new HandoverChecklistResponse();
+
+                    res.setId(c.getId());
+                    res.setCheckpointName(c.getCheckpointName());
+                    res.setSortOrder(c.getSortOrder());
+                    res.setStatus(c.getStatus());
+                    res.setIsPassed(c.getIsPassed());
+                    res.setRemarks(c.getRemarks());
+
+                    return res;
+                })
+                .collect(Collectors.toList());
+    }
 }

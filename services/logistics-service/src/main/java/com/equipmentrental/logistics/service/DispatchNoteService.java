@@ -5,6 +5,7 @@ import com.equipmentrental.logistics.dto.response.DispatchNoteItemResponse;
 import com.equipmentrental.logistics.dto.response.DispatchNoteResponse;
 import com.equipmentrental.logistics.entity.DispatchNote;
 import com.equipmentrental.logistics.entity.DispatchNoteItem;
+import com.equipmentrental.logistics.dto.request.UpdateDispatchNoteStatusRequest;
 import com.equipmentrental.logistics.entity.enums.DispatchStatus;
 import com.equipmentrental.logistics.exception.ResourceNotFoundException;
 import com.equipmentrental.logistics.repository.DispatchNoteItemRepository;
@@ -87,5 +88,29 @@ public class DispatchNoteService {
         res.setItems(itemResponses);
 
         return res;
+    }
+    @Transactional(readOnly = true)
+    public List<DispatchNoteResponse> getAllDispatchNotes() {
+        return repository.findAll()
+                .stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+    @Transactional
+    public DispatchNoteResponse updateStatus(
+            Long id,
+            UpdateDispatchNoteStatusRequest request
+    ) {
+
+        DispatchNote note = repository.findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Dispatch note not found: " + id
+                        )
+                );
+
+        note.setStatus(request.getStatus());
+
+        return mapToResponse(repository.save(note));
     }
 }

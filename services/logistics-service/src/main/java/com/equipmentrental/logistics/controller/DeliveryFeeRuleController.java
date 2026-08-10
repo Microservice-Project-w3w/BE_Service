@@ -27,4 +27,27 @@ public class DeliveryFeeRuleController {
     public List<DeliveryFeeRuleResponse> getActiveRules() {
         return service.getActiveRules();
     }
+
+    @GetMapping("/{id}")
+    public DeliveryFeeRuleResponse getById(
+            @PathVariable Long id
+    ) {
+        return service.getById(id);
+    }
+
+    @PutMapping("/{id}")
+    public DeliveryFeeRuleResponse update(
+            @PathVariable Long id,
+            @Valid @RequestBody CreateDeliveryFeeRuleRequest request
+    ) {
+        return service.update(id, request);
+    }
+
+    @PatchMapping("/{id}/active")
+    public DeliveryFeeRuleResponse updateActive(
+            @PathVariable Long id,
+            @RequestParam boolean active
+    ) {
+        return service.updateActive(id, active);
+    }
 }

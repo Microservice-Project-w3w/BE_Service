@@ -5,6 +5,7 @@ import com.equipmentrental.logistics.dto.request.HandoverPhotoRequest;
 import com.equipmentrental.logistics.dto.response.HandoverPhotoResponse;
 import com.equipmentrental.logistics.dto.response.HandoverRecordResponse;
 import com.equipmentrental.logistics.service.HandoverRecordService;
+import com.equipmentrental.logistics.dto.response.HandoverChecklistResponse;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -51,5 +52,12 @@ public class HandoverRecordController {
     @GetMapping
     public List<HandoverRecordResponse> getHandoverRecords() {
         return service.getHandoverRecords();
+    }
+
+    @GetMapping("/{id}/checklists")
+    public List<HandoverChecklistResponse> getChecklists(
+            @PathVariable Long id
+    ) {
+        return service.getChecklists(id);
     }
 }
