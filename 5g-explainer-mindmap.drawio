@@ -1,0 +1,100 @@
+<mxfile host="app.diagrams.net" agent="Codex">
+  <diagram id="5g-mindmap" name="Mindmap giải thích 5G">
+    <mxGraphModel dx="2811" dy="815" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;align=center;verticalAlign=middle;strokeColor=none;fillColor=none;fontSize=20;" value="&lt;b&gt;MINDMAP: GIẢI THÍCH 5G CHO NGƯỜI MỚI&lt;/b&gt;" vertex="1">
+          <mxGeometry height="35" width="700" x="350" y="25" as="geometry" />
+        </mxCell>
+        <mxCell id="center" parent="1" style="shape=ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=2;align=center;verticalAlign=middle;fontSize=18;" value="&lt;b&gt;5G&lt;/b&gt;&lt;br&gt;Mạng kết nối&lt;br&gt;thiết bị và dữ liệu" vertex="1">
+          <mxGeometry height="105" width="240" x="585" y="365" as="geometry" />
+        </mxCell>
+        <mxCell id="why" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;align=center;verticalAlign=middle;fontSize=14;" value="&lt;b&gt;1. 5G để làm gì?&lt;/b&gt;" vertex="1">
+          <mxGeometry height="50" width="245" x="70" y="130" as="geometry" />
+        </mxCell>
+        <mxCell id="whytext" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;align=center;verticalAlign=middle;fontSize=12;" value="Kết nối nhanh hơn, độ trễ thấp hơn;&lt;br&gt;dùng cho điện thoại, robot và IoT" vertex="1">
+          <mxGeometry height="48" width="305" x="40" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="path" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;align=center;verticalAlign=middle;fontSize=14;" value="&lt;b&gt;2. Đường đi cơ bản&lt;/b&gt;" vertex="1">
+          <mxGeometry height="50" width="265" x="280" y="260" as="geometry" />
+        </mxCell>
+        <mxCell id="pathtext" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;align=center;verticalAlign=middle;fontSize=12;" value="UE → gNodeB → 5G Core → Internet&lt;br&gt;Thiết bị → trạm sóng → mạng lõi → mạng ngoài" vertex="1">
+          <mxGeometry height="55" width="315" x="-360" y="295" as="geometry" />
+        </mxCell>
+        <mxCell id="planes" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;align=center;verticalAlign=middle;fontSize=14;" value="&lt;b&gt;3. Hai việc chính&lt;/b&gt;" vertex="1">
+          <mxGeometry height="50" width="255" x="65" y="555" as="geometry" />
+        </mxCell>
+        <mxCell id="planestext" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;align=center;verticalAlign=middle;fontSize=12;" value="Control Plane: kiểm tra và điều phối&lt;br&gt;User Plane: chở dữ liệu thực tế" vertex="1">
+          <mxGeometry height="55" width="315" x="35" y="630" as="geometry" />
+        </mxCell>
+        <mxCell id="parts" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;align=center;verticalAlign=middle;fontSize=14;" value="&lt;b&gt;4. Ai làm việc gì?&lt;/b&gt;" vertex="1">
+          <mxGeometry height="50" width="275" x="700" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="partstext" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;align=center;verticalAlign=middle;fontSize=12;" value="AMF: cho UE vào mạng · SMF: quản lý phiên&lt;br&gt;UPF: chuyển dữ liệu · AUSF/UDM: xác thực&lt;br&gt;PCF: chính sách · UDR: kho dữ liệu" vertex="1">
+          <mxGeometry height="75" width="375" x="950" y="190" as="geometry" />
+        </mxCell>
+        <mxCell id="join" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;align=center;verticalAlign=middle;fontSize=14;" value="&lt;b&gt;5. Khi UE vào mạng&lt;/b&gt;" vertex="1">
+          <mxGeometry height="50" width="295" x="825" y="280" as="geometry" />
+        </mxCell>
+        <mxCell id="jointext" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;align=center;verticalAlign=middle;fontSize=12;" value="UE kết nối trạm sóng → AMF nhận yêu cầu&lt;br&gt;→ AUSF/UDM xác thực → UE được vào mạng" vertex="1">
+          <mxGeometry height="55" width="375" x="1130" y="350" as="geometry" />
+        </mxCell>
+        <mxCell id="data" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;align=center;verticalAlign=middle;fontSize=14;" value="&lt;b&gt;6. Khi UE dùng Internet&lt;/b&gt;" vertex="1">
+          <mxGeometry height="50" width="305" x="985" y="580" as="geometry" />
+        </mxCell>
+        <mxCell id="datatext" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;align=center;verticalAlign=middle;fontSize=12;" value="SMF mở phiên → cấu hình UPF&lt;br&gt;→ UE → gNodeB → UPF → Internet" vertex="1">
+          <mxGeometry height="55" width="375" x="950" y="655" as="geometry" />
+        </mxCell>
+        <mxCell id="project" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;align=center;verticalAlign=middle;fontSize=14;" value="&lt;b&gt;7. Next5G Lab Manager&lt;/b&gt;" vertex="1">
+          <mxGeometry height="50" width="440" x="385" y="555" as="geometry" />
+        </mxCell>
+        <mxCell id="projecttext" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;align=center;verticalAlign=middle;fontSize=12;" value="Công cụ quản lý Open5GS + UERANSIM, subscriber/UE,&lt;br&gt;kiểm thử Data Plane, giám sát, cảnh báo và policy truy cập" vertex="1">
+          <mxGeometry height="55" width="540" x="385" y="710" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" edge="1" parent="1" source="center" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=none;startArrow=none;strokeColor=#000000;" target="why">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" edge="1" parent="1" source="why" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=none;startArrow=none;strokeColor=#000000;" target="whytext">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" edge="1" parent="1" source="center" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=none;startArrow=none;strokeColor=#000000;" target="path">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" edge="1" parent="1" source="path" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=none;startArrow=none;strokeColor=#000000;" target="pathtext">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" edge="1" parent="1" source="center" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=none;startArrow=none;strokeColor=#000000;" target="planes">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" edge="1" parent="1" source="planes" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=none;startArrow=none;strokeColor=#000000;" target="planestext">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" edge="1" parent="1" source="center" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=none;startArrow=none;strokeColor=#000000;" target="parts">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" edge="1" parent="1" source="parts" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=none;startArrow=none;strokeColor=#000000;" target="partstext">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" edge="1" parent="1" source="center" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=none;startArrow=none;strokeColor=#000000;" target="join">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" edge="1" parent="1" source="join" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=none;startArrow=none;strokeColor=#000000;" target="jointext">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e11" edge="1" parent="1" source="center" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=none;startArrow=none;strokeColor=#000000;" target="data">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e12" edge="1" parent="1" source="data" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=none;startArrow=none;strokeColor=#000000;" target="datatext">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e13" edge="1" parent="1" source="center" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=none;startArrow=none;strokeColor=#000000;" target="project">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e14" edge="1" parent="1" source="project" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=none;startArrow=none;strokeColor=#000000;" target="projecttext">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
