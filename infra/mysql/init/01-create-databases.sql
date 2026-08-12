@@ -397,6 +397,482 @@ CREATE INDEX idx_audit_logs_user
 CREATE INDEX idx_audit_logs_action
     ON audit_logs(action_code, created_at);
 CREATE DATABASE IF NOT EXISTS organization_customer_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+       -- =========================================================
+-- ORGANIZATION CUSTOMER SERVICE DATABASE
+-- =========================================================
+
+CREATE DATABASE IF NOT EXISTS organization_customer_db
+CHARACTER SET utf8mb4
+COLLATE utf8mb4_unicode_ci;
+
+USE organization_customer_db;
+
+
+-- =========================================================
+-- 1. ORGANIZATIONS - DOANH NGHIỆP
+-- =========================================================
+
+CREATE TABLE organizations (
+                               id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+                               organization_code VARCHAR(50) NOT NULL,
+                               organization_name VARCHAR(255) NOT NULL,
+
+                               tax_code VARCHAR(50),
+                               email VARCHAR(255),
+                               phone VARCHAR(30),
+
+                               address VARCHAR(500),
+
+                               status ENUM(
+        'ACTIVE',
+        'INACTIVE',
+        'SUSPENDED',
+        'DELETED'
+    ) NOT NULL DEFAULT 'ACTIVE',
+
+                               created_by BIGINT,
+                               updated_by BIGINT,
+
+                               created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                               updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                   ON UPDATE CURRENT_TIMESTAMP,
+
+                               deleted_at DATETIME NULL,
+
+                               CONSTRAINT uq_organizations_code
+                                   UNIQUE (organization_code),
+
+                               CONSTRAINT uq_organizations_tax_code
+                                   UNIQUE (tax_code)
+);
+
+
+-- =========================================================
+-- 2. BRANCHES - CHI NHÁNH
+-- =========================================================
+
+CREATE TABLE branches (
+                          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+                          organization_id BIGINT NOT NULL,
+
+                          branch_code VARCHAR(50) NOT NULL,
+                          branch_name VARCHAR(255) NOT NULL,
+
+                          email VARCHAR(255),
+                          phone VARCHAR(30),
+
+                          address VARCHAR(500),
+
+                          status ENUM(
+        'ACTIVE',
+        'INACTIVE',
+        'DELETED'
+    ) NOT NULL DEFAULT 'ACTIVE',
+
+                          created_by BIGINT,
+                          updated_by BIGINT,
+
+                          created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                          updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                              ON UPDATE CURRENT_TIMESTAMP,
+
+                          deleted_at DATETIME NULL,
+
+                          CONSTRAINT fk_branches_organization
+                              FOREIGN KEY (organization_id)
+                                  REFERENCES organizations(id),
+
+                          CONSTRAINT uq_branch_code_per_organization
+                              UNIQUE (organization_id, branch_code),
+
+    -- phục vụ FK kép để bảo đảm đúng organization
+                          CONSTRAINT uq_branch_id_organization
+                              UNIQUE (id, organization_id)
+);
+
+
+-- =========================================================
+-- 3. EMPLOYEES - NHÂN VIÊN
+--
+-- user_id chỉ tham chiếu LOGIC sang identity-service.
+-- KHÔNG tạo foreign key tới identity_db.
+-- =========================================================
+
+CREATE TABLE employees (
+                           id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+                           organization_id BIGINT NOT NULL,
+
+    -- ID user lấy từ identity-service nếu nhân viên có tài khoản
+                           user_id BIGINT NULL,
+
+                           employee_code VARCHAR(50) NOT NULL,
+
+                           full_name VARCHAR(255) NOT NULL,
+
+                           email VARCHAR(255),
+                           phone VARCHAR(30),
+
+                           job_title VARCHAR(100),
+
+                           status ENUM(
+        'ACTIVE',
+        'INACTIVE',
+        'RESIGNED',
+        'DELETED'
+    ) NOT NULL DEFAULT 'ACTIVE',
+
+                           hire_date DATE,
+
+                           created_by BIGINT,
+                           updated_by BIGINT,
+
+                           created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                           updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                               ON UPDATE CURRENT_TIMESTAMP,
+
+                           deleted_at DATETIME NULL,
+
+                           CONSTRAINT fk_employees_organization
+                               FOREIGN KEY (organization_id)
+                                   REFERENCES organizations(id),
+
+                           CONSTRAINT uq_employee_code_per_organization
+                               UNIQUE (organization_id, employee_code),
+
+                           CONSTRAINT uq_employee_user_per_organization
+                               UNIQUE (organization_id, user_id),
+
+    -- phục vụ EmployeeBranchAssignment
+                           CONSTRAINT uq_employee_id_organization
+                               UNIQUE (id, organization_id)
+);
+
+
+-- =========================================================
+-- 4. EMPLOYEE BRANCH ASSIGNMENTS
+-- GÁN NHÂN VIÊN VÀO CHI NHÁNH
+--
+-- Đây là bảng RIÊNG theo đúng yêu cầu.
+-- Không nhét branch trực tiếp vào employee.
+-- =========================================================
+
+CREATE TABLE employee_branch_assignments (
+                                             id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+                                             organization_id BIGINT NOT NULL,
+                                             employee_id BIGINT NOT NULL,
+                                             branch_id BIGINT NOT NULL,
+
+                                             is_primary BOOLEAN NOT NULL DEFAULT FALSE,
+
+                                             assigned_from DATE,
+                                             assigned_to DATE,
+
+                                             status ENUM(
+        'ACTIVE',
+        'INACTIVE'
+    ) NOT NULL DEFAULT 'ACTIVE',
+
+                                             created_by BIGINT,
+                                             updated_by BIGINT,
+
+                                             created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                             updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                                 ON UPDATE CURRENT_TIMESTAMP,
+
+                                             CONSTRAINT fk_assignment_organization
+                                                 FOREIGN KEY (organization_id)
+                                                     REFERENCES organizations(id),
+
+    -- employee phải thuộc đúng organization
+                                             CONSTRAINT fk_assignment_employee
+                                                 FOREIGN KEY (employee_id, organization_id)
+                                                     REFERENCES employees(id, organization_id),
+
+    -- branch phải thuộc đúng organization
+                                             CONSTRAINT fk_assignment_branch
+                                                 FOREIGN KEY (branch_id, organization_id)
+                                                     REFERENCES branches(id, organization_id),
+
+                                             CONSTRAINT uq_employee_branch
+                                                 UNIQUE (employee_id, branch_id)
+);
+
+
+-- =========================================================
+-- 5. CUSTOMERS - KHÁCH HÀNG
+--
+-- Dùng chung 1 bảng cho:
+-- + INDIVIDUAL = khách hàng cá nhân
+-- + BUSINESS   = khách hàng doanh nghiệp
+--
+-- owner_user_id hỗ trợ kiểm tra scope OWN.
+-- =========================================================
+
+CREATE TABLE customers (
+                           id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+                           organization_id BIGINT NOT NULL,
+
+    -- Có thể NULL nếu khách hàng không thuộc riêng một chi nhánh
+                           branch_id BIGINT NULL,
+
+    -- user chịu trách nhiệm quản lý customer này.
+    -- Chỉ tham chiếu logic tới identity-service.
+                           owner_user_id BIGINT NULL,
+
+                           customer_code VARCHAR(50) NOT NULL,
+
+                           customer_type ENUM(
+        'INDIVIDUAL',
+        'BUSINESS'
+    ) NOT NULL,
+
+    -- =====================================================
+    -- Thông tin chung
+    -- =====================================================
+
+                           display_name VARCHAR(255) NOT NULL,
+
+                           email VARCHAR(255),
+                           phone VARCHAR(30),
+
+                           address VARCHAR(500),
+
+    -- =====================================================
+    -- Thông tin khách hàng cá nhân
+    -- =====================================================
+
+                           full_name VARCHAR(255),
+                           date_of_birth DATE,
+
+                           identity_number VARCHAR(100),
+
+    -- =====================================================
+    -- Thông tin khách hàng doanh nghiệp
+    -- =====================================================
+
+                           company_name VARCHAR(255),
+                           tax_code VARCHAR(50),
+
+                           representative_name VARCHAR(255),
+                           representative_phone VARCHAR(30),
+                           representative_email VARCHAR(255),
+
+    -- =====================================================
+
+                           status ENUM(
+        'ACTIVE',
+        'INACTIVE',
+        'BLOCKED',
+        'DELETED'
+    ) NOT NULL DEFAULT 'ACTIVE',
+
+                           note TEXT,
+
+                           created_by BIGINT,
+                           updated_by BIGINT,
+
+                           created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                           updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                               ON UPDATE CURRENT_TIMESTAMP,
+
+                           deleted_at DATETIME NULL,
+
+                           CONSTRAINT fk_customers_organization
+                               FOREIGN KEY (organization_id)
+                                   REFERENCES organizations(id),
+
+                           CONSTRAINT fk_customers_branch
+                               FOREIGN KEY (branch_id, organization_id)
+                                   REFERENCES branches(id, organization_id),
+
+                           CONSTRAINT uq_customer_code_per_organization
+                               UNIQUE (organization_id, customer_code),
+
+                           CONSTRAINT uq_customer_id_organization
+                               UNIQUE (id, organization_id)
+);
+
+
+-- =========================================================
+-- 6. CUSTOMER GROUPS - NHÓM KHÁCH HÀNG
+-- =========================================================
+
+CREATE TABLE customer_groups (
+                                 id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+                                 organization_id BIGINT NOT NULL,
+
+                                 group_code VARCHAR(50) NOT NULL,
+                                 group_name VARCHAR(255) NOT NULL,
+
+                                 description TEXT,
+
+                                 status ENUM(
+        'ACTIVE',
+        'INACTIVE',
+        'DELETED'
+    ) NOT NULL DEFAULT 'ACTIVE',
+
+                                 created_by BIGINT,
+                                 updated_by BIGINT,
+
+                                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                 updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                     ON UPDATE CURRENT_TIMESTAMP,
+
+                                 deleted_at DATETIME NULL,
+
+                                 CONSTRAINT fk_customer_groups_organization
+                                     FOREIGN KEY (organization_id)
+                                         REFERENCES organizations(id),
+
+                                 CONSTRAINT uq_customer_group_code
+                                     UNIQUE (organization_id, group_code),
+
+                                 CONSTRAINT uq_customer_group_id_organization
+                                     UNIQUE (id, organization_id)
+);
+
+
+-- =========================================================
+-- 7. CUSTOMER GROUP MEMBERS
+--
+-- Quan hệ nhiều-nhiều:
+-- Customer <-> CustomerGroup
+-- =========================================================
+
+CREATE TABLE customer_group_members (
+                                        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+                                        organization_id BIGINT NOT NULL,
+
+                                        customer_group_id BIGINT NOT NULL,
+                                        customer_id BIGINT NOT NULL,
+
+                                        created_by BIGINT,
+
+                                        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+                                        CONSTRAINT fk_group_member_organization
+                                            FOREIGN KEY (organization_id)
+                                                REFERENCES organizations(id),
+
+                                        CONSTRAINT fk_group_member_group
+                                            FOREIGN KEY (customer_group_id, organization_id)
+                                                REFERENCES customer_groups(id, organization_id),
+
+                                        CONSTRAINT fk_group_member_customer
+                                            FOREIGN KEY (customer_id, organization_id)
+                                                REFERENCES customers(id, organization_id),
+
+                                        CONSTRAINT uq_customer_group_member
+                                            UNIQUE (customer_group_id, customer_id)
+);
+
+
+-- =========================================================
+-- 8. RESTRICTED CUSTOMERS
+-- DANH SÁCH KHÁCH HÀNG HẠN CHẾ
+--
+-- Đây là bảng riêng theo đúng yêu cầu.
+-- Không chỉ dùng một boolean trong bảng customers.
+-- =========================================================
+
+CREATE TABLE restricted_customers (
+                                      id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+                                      organization_id BIGINT NOT NULL,
+                                      customer_id BIGINT NOT NULL,
+
+                                      restriction_type ENUM(
+        'RENTAL_BLOCK',
+        'PAYMENT_RISK',
+        'LATE_RETURN',
+        'DAMAGED_EQUIPMENT',
+        'FRAUD_RISK',
+        'OTHER'
+    ) NOT NULL,
+
+                                      reason VARCHAR(1000) NOT NULL,
+
+                                      status ENUM(
+        'ACTIVE',
+        'EXPIRED',
+        'REMOVED'
+    ) NOT NULL DEFAULT 'ACTIVE',
+
+                                      restricted_from DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+                                      restricted_until DATETIME NULL,
+
+    -- user từ identity-service thực hiện hạn chế
+                                      restricted_by_user_id BIGINT NOT NULL,
+
+                                      removed_at DATETIME NULL,
+                                      removed_by_user_id BIGINT NULL,
+                                      removed_reason VARCHAR(1000),
+
+                                      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                          ON UPDATE CURRENT_TIMESTAMP,
+
+                                      CONSTRAINT fk_restricted_organization
+                                          FOREIGN KEY (organization_id)
+                                              REFERENCES organizations(id),
+
+                                      CONSTRAINT fk_restricted_customer
+                                          FOREIGN KEY (customer_id, organization_id)
+                                              REFERENCES customers(id, organization_id)
+);
+
+
+-- =========================================================
+-- INDEX
+-- =========================================================
+
+CREATE INDEX idx_branches_organization
+    ON branches(organization_id);
+
+CREATE INDEX idx_employees_organization
+    ON employees(organization_id);
+
+CREATE INDEX idx_employees_user
+    ON employees(user_id);
+
+CREATE INDEX idx_assignment_employee
+    ON employee_branch_assignments(employee_id);
+
+CREATE INDEX idx_assignment_branch
+    ON employee_branch_assignments(branch_id);
+
+CREATE INDEX idx_customers_organization
+    ON customers(organization_id);
+
+CREATE INDEX idx_customers_branch
+    ON customers(branch_id);
+
+CREATE INDEX idx_customers_owner
+    ON customers(owner_user_id);
+
+CREATE INDEX idx_customers_email
+    ON customers(email);
+
+CREATE INDEX idx_customers_phone
+    ON customers(phone);
+
+CREATE INDEX idx_customer_groups_organization
+    ON customer_groups(organization_id);
+
+CREATE INDEX idx_restricted_customer
+    ON restricted_customers(customer_id);
+
+CREATE INDEX idx_restricted_status
+    ON restricted_customers(organization_id, status);
 CREATE DATABASE IF NOT EXISTS inventory_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE DATABASE IF NOT EXISTS rental_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE rental_db;
@@ -599,5 +1075,346 @@ CREATE TABLE IF NOT EXISTS contract_appendices (
 );
 
 CREATE DATABASE IF NOT EXISTS logistics_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE logistics_db;
+
+
+-- =========================================================
+-- 1. CẤU HÌNH PHÍ GIAO NHẬN
+-- =========================================================
+CREATE TABLE delivery_fee_rules (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+    organization_id BIGINT NOT NULL,
+    branch_id BIGINT NULL,
+
+    name VARCHAR(100) NOT NULL,
+
+    base_fee DECIMAL(15,2) NOT NULL,
+    max_distance_km DECIMAL(10,2) NOT NULL,
+    extra_fee_per_km DECIMAL(15,2) NOT NULL,
+
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL DEFAULT NULL
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    INDEX idx_delivery_fee_org (organization_id),
+    INDEX idx_delivery_fee_branch (branch_id),
+    INDEX idx_delivery_fee_active (is_active)
+);
+
+
+-- =========================================================
+-- 2. NHIỆM VỤ / PHÂN CÔNG GIAO NHẬN
+-- =========================================================
+CREATE TABLE delivery_tasks (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+    rental_order_id BIGINT NOT NULL,
+
+    -- DELIVERY / RETURN_PICKUP
+    task_type VARCHAR(30) NOT NULL,
+
+    -- User ID lấy từ identity-service
+    delivery_staff_user_id BIGINT NOT NULL,
+
+    scheduled_at DATETIME NOT NULL,
+
+    -- PENDING / ASSIGNED / IN_PROGRESS / COMPLETED / CANCELLED
+    status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+
+    notes VARCHAR(1000),
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL DEFAULT NULL
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    INDEX idx_delivery_task_order (rental_order_id),
+    INDEX idx_delivery_task_staff (delivery_staff_user_id),
+    INDEX idx_delivery_task_schedule (scheduled_at),
+    INDEX idx_delivery_task_status (status)
+);
+
+
+-- =========================================================
+-- 3. PHIẾU XUẤT KHO / GIAO THIẾT BỊ
+-- =========================================================
+CREATE TABLE dispatch_notes (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+    dispatch_code VARCHAR(50) NOT NULL UNIQUE,
+
+    -- ID từ rental-service
+    rental_order_id BIGINT NOT NULL,
+
+    -- ID từ organization-customer-service
+    customer_id BIGINT NOT NULL,
+
+    -- FK nội bộ logistics-service
+    delivery_task_id BIGINT NOT NULL,
+
+    -- PREPARED / DISPATCHED / DELIVERED / CANCELLED
+    status VARCHAR(30) NOT NULL DEFAULT 'PREPARED',
+
+    prepared_at DATETIME NULL,
+    dispatched_at DATETIME NULL,
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL DEFAULT NULL
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_dispatch_note_task
+        FOREIGN KEY (delivery_task_id)
+        REFERENCES delivery_tasks(id),
+
+    INDEX idx_dispatch_order (rental_order_id),
+    INDEX idx_dispatch_customer (customer_id),
+    INDEX idx_dispatch_task (delivery_task_id),
+    INDEX idx_dispatch_status (status)
+);
+
+
+-- =========================================================
+-- 4. CHI TIẾT PHIẾU XUẤT
+-- =========================================================
+CREATE TABLE dispatch_note_items (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+    dispatch_note_id BIGINT NOT NULL,
+
+    -- ID thiết bị từ inventory-service
+    equipment_id BIGINT NOT NULL,
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_dispatch_item_note
+        FOREIGN KEY (dispatch_note_id)
+        REFERENCES dispatch_notes(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT uk_dispatch_equipment
+        UNIQUE (dispatch_note_id, equipment_id),
+
+    INDEX idx_dispatch_item_equipment (equipment_id)
+);
+
+
+-- =========================================================
+-- 5. BIÊN BẢN BÀN GIAO
+-- =========================================================
+CREATE TABLE handover_records (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+    dispatch_note_id BIGINT NOT NULL,
+
+    handover_time DATETIME NOT NULL,
+
+    receiver_name VARCHAR(100) NOT NULL,
+    receiver_phone VARCHAR(20) NOT NULL,
+
+    -- Chỉ lưu URL/object key, không lưu binary
+    customer_signature_url VARCHAR(1000),
+
+    confirmed_by_customer BOOLEAN NOT NULL DEFAULT FALSE,
+    confirmed_at DATETIME NULL,
+
+    notes VARCHAR(1000),
+
+    -- PENDING / COMPLETED / REJECTED / CANCELLED
+    status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL DEFAULT NULL
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_handover_dispatch
+        FOREIGN KEY (dispatch_note_id)
+        REFERENCES dispatch_notes(id),
+
+    INDEX idx_handover_dispatch (dispatch_note_id),
+    INDEX idx_handover_status (status)
+);
+
+
+-- =========================================================
+-- 6. ẢNH BÀN GIAO
+-- =========================================================
+CREATE TABLE handover_photos (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+    handover_record_id BIGINT NOT NULL,
+
+    -- URL hoặc object key
+    photo_url VARCHAR(1000) NOT NULL,
+
+    -- BEFORE_DELIVERY / EQUIPMENT / ACCESSORY /
+    -- CUSTOMER_RECEIVED / DAMAGE / OTHER
+    photo_type VARCHAR(30) NOT NULL,
+
+    sort_order INT NOT NULL DEFAULT 0,
+
+    -- ACTIVE / INACTIVE
+    status VARCHAR(30) NOT NULL DEFAULT 'ACTIVE',
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_photo_handover
+        FOREIGN KEY (handover_record_id)
+        REFERENCES handover_records(id)
+        ON DELETE CASCADE,
+
+    INDEX idx_handover_photo_record (handover_record_id)
+);
+
+
+-- =========================================================
+-- 7. CHECKLIST BÀN GIAO
+-- =========================================================
+CREATE TABLE handover_checklists (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+    handover_record_id BIGINT NOT NULL,
+
+    checkpoint_name VARCHAR(200) NOT NULL,
+
+    sort_order INT NOT NULL DEFAULT 0,
+
+    -- PENDING / CHECKED / FAILED
+    status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+
+    is_passed BOOLEAN NOT NULL DEFAULT FALSE,
+
+    remarks VARCHAR(500),
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_checklist_handover
+        FOREIGN KEY (handover_record_id)
+        REFERENCES handover_records(id)
+        ON DELETE CASCADE,
+
+    INDEX idx_checklist_handover (handover_record_id)
+);
+
+
+-- =========================================================
+-- 8. YÊU CẦU TRẢ THIẾT BỊ
+-- =========================================================
+CREATE TABLE return_requests (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+    -- ID từ rental-service
+    rental_order_id BIGINT NOT NULL,
+
+    -- ID từ organization-customer-service
+    customer_id BIGINT NOT NULL,
+
+    requested_return_date DATETIME NOT NULL,
+
+    reason VARCHAR(500),
+
+    -- Nếu logistics đến lấy tại địa chỉ khách
+    pickup_address VARCHAR(500),
+
+    -- PENDING / APPROVED / SCHEDULED /
+    -- IN_PROGRESS / COMPLETED / CANCELLED
+    status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL DEFAULT NULL
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    INDEX idx_return_request_order (rental_order_id),
+    INDEX idx_return_request_customer (customer_id),
+    INDEX idx_return_request_status (status),
+    INDEX idx_return_request_date (requested_return_date)
+);
+
+
+-- =========================================================
+-- 9. BIÊN BẢN NHẬN TRẢ
+-- =========================================================
+CREATE TABLE return_records (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+    return_request_id BIGINT NOT NULL,
+
+    -- ID từ rental-service
+    rental_order_id BIGINT NOT NULL,
+
+    -- User ID từ identity-service
+    inspector_staff_user_id BIGINT NOT NULL,
+
+    actual_return_time DATETIME NOT NULL,
+
+    -- Dữ liệu đầu vào chính thức cho Billing
+    is_late_return BOOLEAN NOT NULL DEFAULT FALSE,
+
+    -- Số phút trả trễ.
+    -- Logistics ghi nhận thời gian, Billing chịu trách nhiệm tính tiền.
+    late_minutes BIGINT NOT NULL DEFAULT 0,
+
+    -- Tổng quan của toàn bộ lần trả
+    missing_accessories_description VARCHAR(1000),
+    condition_damage_description VARCHAR(1000),
+
+    -- DRAFT / INSPECTED / CONFIRMED / COMPLETED / CANCELLED
+    status VARCHAR(30) NOT NULL DEFAULT 'DRAFT',
+
+    notes VARCHAR(1000),
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL DEFAULT NULL
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_return_record_request
+        FOREIGN KEY (return_request_id)
+        REFERENCES return_requests(id),
+
+    INDEX idx_return_record_request (return_request_id),
+    INDEX idx_return_record_order (rental_order_id),
+    INDEX idx_return_record_inspector (inspector_staff_user_id),
+    INDEX idx_return_record_status (status)
+);
+
+
+-- =========================================================
+-- 10. CHI TIẾT KIỂM TRA THIẾT BỊ KHI TRẢ
+-- =========================================================
+CREATE TABLE return_record_items (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+    return_record_id BIGINT NOT NULL,
+
+    -- ID từ inventory-service
+    equipment_id BIGINT NOT NULL,
+
+    -- GOOD / SCRATCHED / DAMAGED / BROKEN / MISSING
+    returned_condition VARCHAR(30) NOT NULL DEFAULT 'GOOD',
+
+    -- Dữ liệu phục vụ Maintenance
+    is_damaged BOOLEAN NOT NULL DEFAULT FALSE,
+    damage_description VARCHAR(1000),
+
+    -- Dữ liệu phục vụ Billing
+    is_missing_accessories BOOLEAN NOT NULL DEFAULT FALSE,
+    missing_accessories_description VARCHAR(1000),
+
+    notes VARCHAR(500),
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_return_item_record
+        FOREIGN KEY (return_record_id)
+        REFERENCES return_records(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT uk_return_equipment
+        UNIQUE (return_record_id, equipment_id),
+
+    INDEX idx_return_item_equipment (equipment_id),
+    INDEX idx_return_item_condition (returned_condition)
+);
 CREATE DATABASE IF NOT EXISTS billing_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE DATABASE IF NOT EXISTS maintenance_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

@@ -5,6 +5,5 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 
-public record AppendixCreateRequest(@NotNull AppendixType appendixType, LocalDateTime newEndAt,
-                                    @NotBlank String terms) {
-}
+public record AppendixCreateRequest(
+        @NotNull AppendixType appendixType, LocalDateTime newEndAt, @NotBlank String terms) {}

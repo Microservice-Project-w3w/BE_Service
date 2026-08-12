@@ -39,7 +39,9 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void returnsValidationDetails() throws Exception {
-        mockMvc.perform(post("/validation").contentType(MediaType.APPLICATION_JSON).content("{}"))
+        mockMvc.perform(post("/validation")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
                 .andExpect(jsonPath("$.details[0].field").value("name"));
@@ -53,8 +55,7 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void createsCorrelationIdWhenMissing() throws Exception {
-        mockMvc.perform(get("/business"))
-                .andExpect(header().exists(CorrelationIdFilter.HEADER_NAME));
+        mockMvc.perform(get("/business")).andExpect(header().exists(CorrelationIdFilter.HEADER_NAME));
     }
 
     @Test
@@ -83,6 +84,5 @@ class GlobalExceptionHandlerTest {
         }
     }
 
-    record Request(@NotBlank String name) {
-    }
+    record Request(@NotBlank String name) {}
 }

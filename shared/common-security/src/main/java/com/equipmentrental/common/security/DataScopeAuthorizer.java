@@ -13,7 +13,9 @@ public class DataScopeAuthorizer {
         if (user == null || organizationId == null || branchId == null) {
             return false;
         }
-        return isAdmin(user) || (canAccessOrganization(user, organizationId) && user.branchIds().contains(branchId));
+        return isAdmin(user)
+                || (canAccessOrganization(user, organizationId)
+                        && user.branchIds().contains(branchId));
     }
 
     public boolean canAccessOwner(CurrentUser user, String ownerUserId) {

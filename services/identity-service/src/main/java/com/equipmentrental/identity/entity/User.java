@@ -1,7 +1,6 @@
 package com.equipmentrental.identity.entity;
 
 import jakarta.persistence.*;
-
 import java.time.LocalDateTime;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -9,23 +8,11 @@ import java.util.Set;
 @Entity
 @Table(
         name = "users",
-        uniqueConstraints = {
-                @UniqueConstraint(
-                        name = "uq_users_email",
-                        columnNames = "email"
-                )
-        },
+        uniqueConstraints = {@UniqueConstraint(name = "uq_users_email", columnNames = "email")},
         indexes = {
-                @Index(
-                        name = "idx_users_role_id",
-                        columnList = "role_id"
-                ),
-                @Index(
-                        name = "idx_users_status",
-                        columnList = "status"
-                )
-        }
-)
+            @Index(name = "idx_users_role_id", columnList = "role_id"),
+            @Index(name = "idx_users_status", columnList = "status")
+        })
 public class User {
 
     @Id
@@ -35,17 +22,8 @@ public class User {
     /*
      * Mỗi người dùng chỉ có một vai trò.
      */
-    @ManyToOne(
-            fetch = FetchType.LAZY,
-            optional = false
-    )
-    @JoinColumn(
-            name = "role_id",
-            nullable = false,
-            foreignKey = @ForeignKey(
-                    name = "fk_users_role"
-            )
-    )
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "role_id", nullable = false, foreignKey = @ForeignKey(name = "fk_users_role"))
     private Role role;
 
     @Column(name = "organization_id")
@@ -56,45 +34,23 @@ public class User {
     @Column(name = "branch_id", nullable = false)
     private Set<Long> branchIds = new LinkedHashSet<>();
 
-    @Column(
-            name = "full_name",
-            nullable = false,
-            length = 150
-    )
+    @Column(name = "full_name", nullable = false, length = 150)
     private String fullName;
 
-    @Column(
-            name = "email",
-            nullable = false,
-            length = 150
-    )
+    @Column(name = "email", nullable = false, length = 150)
     private String email;
 
-    @Column(
-            name = "password_hash",
-            nullable = false,
-            length = 255
-    )
+    @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
     @Enumerated(EnumType.STRING)
-    @Column(
-            name = "status",
-            nullable = false,
-            length = 30
-    )
+    @Column(name = "status", nullable = false, length = 30)
     private UserStatus status;
 
-    @Column(
-            name = "email_verified",
-            nullable = false
-    )
+    @Column(name = "email_verified", nullable = false)
     private boolean emailVerified;
 
-    @Column(
-            name = "failed_login_attempts",
-            nullable = false
-    )
+    @Column(name = "failed_login_attempts", nullable = false)
     private int failedLoginAttempts;
 
     @Column(name = "locked_until")
@@ -108,43 +64,26 @@ public class User {
      * Có thể NULL khi khách hàng tự đăng ký.
      */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(
-            name = "created_by",
-            foreignKey = @ForeignKey(
-                    name = "fk_users_created_by"
-            )
-    )
+    @JoinColumn(name = "created_by", foreignKey = @ForeignKey(name = "fk_users_created_by"))
     private User createdBy;
 
     /*
      * Người cập nhật tài khoản gần nhất.
      */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(
-            name = "updated_by",
-            foreignKey = @ForeignKey(
-                    name = "fk_users_updated_by"
-            )
-    )
+    @JoinColumn(name = "updated_by", foreignKey = @ForeignKey(name = "fk_users_updated_by"))
     private User updatedBy;
 
-    @Column(
-            name = "created_at",
-            nullable = false
-    )
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    @Column(
-            name = "updated_at",
-            nullable = false
-    )
+    @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
-    public User() {
-    }
+    public User() {}
 
     @PrePersist
     public void prePersist() {

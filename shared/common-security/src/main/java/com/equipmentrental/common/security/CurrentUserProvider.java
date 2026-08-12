@@ -21,10 +21,7 @@ public class CurrentUserProvider {
         if (jwt == null) {
             return CurrentUser.empty();
         }
-        String username = firstNonBlank(
-                jwt.getClaimAsString("preferred_username"),
-                jwt.getClaimAsString("username")
-        );
+        String username = firstNonBlank(jwt.getClaimAsString("preferred_username"), jwt.getClaimAsString("username"));
         return new CurrentUser(
                 jwt.getSubject(),
                 username,
@@ -32,8 +29,7 @@ public class CurrentUserProvider {
                 toLongSet(jwt.getClaim("branchIds")),
                 toStringSet(jwt.getClaim("roles")),
                 toStringSet(jwt.getClaim("permissions")),
-                jwt.getClaimAsString("sessionId")
-        );
+                jwt.getClaimAsString("sessionId"));
     }
 
     public static Long toLong(Object value) {

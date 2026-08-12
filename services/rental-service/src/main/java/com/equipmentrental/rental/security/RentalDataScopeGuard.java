@@ -16,8 +16,7 @@ public class RentalDataScopeGuard {
     private final CurrentUserProvider currentUserProvider;
     private final DataScopeAuthorizer dataScopeAuthorizer;
 
-    public RentalDataScopeGuard(CurrentUserProvider currentUserProvider,
-                                DataScopeAuthorizer dataScopeAuthorizer) {
+    public RentalDataScopeGuard(CurrentUserProvider currentUserProvider, DataScopeAuthorizer dataScopeAuthorizer) {
         this.currentUserProvider = currentUserProvider;
         this.dataScopeAuthorizer = dataScopeAuthorizer;
     }

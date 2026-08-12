@@ -1,7 +1,6 @@
 package com.equipmentrental.identity.entity;
 
 import jakarta.persistence.*;
-
 import java.time.LocalDateTime;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -9,68 +8,38 @@ import java.util.Set;
 @Entity
 @Table(
         name = "roles",
-        uniqueConstraints = {
-                @UniqueConstraint(
-                        name = "uq_roles_code",
-                        columnNames = "code"
-                )
-        }
-)
+        uniqueConstraints = {@UniqueConstraint(name = "uq_roles_code", columnNames = "code")})
 public class Role {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(
-            name = "code",
-            nullable = false,
-            length = 50
-    )
+    @Column(name = "code", nullable = false, length = 50)
     private String code;
 
-    @Column(
-            name = "name",
-            nullable = false,
-            length = 100
-    )
+    @Column(name = "name", nullable = false, length = 100)
     private String name;
 
-    @Column(
-            name = "description",
-            length = 255
-    )
+    @Column(name = "description", length = 255)
     private String description;
 
-    @Column(
-            name = "is_system",
-            nullable = false
-    )
+    @Column(name = "is_system", nullable = false)
     private boolean systemRole;
 
-    @Column(
-            name = "is_active",
-            nullable = false
-    )
+    @Column(name = "is_active", nullable = false)
     private boolean active;
 
     @OneToMany(mappedBy = "role", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private Set<RolePermission> rolePermissions = new LinkedHashSet<>();
 
-    @Column(
-            name = "created_at",
-            nullable = false
-    )
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    @Column(
-            name = "updated_at",
-            nullable = false
-    )
+    @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    protected Role() {
-    }
+    protected Role() {}
 
     public Role(String code, String name, String description, boolean systemRole, boolean active) {
         this.code = code;
@@ -138,12 +107,15 @@ public class Role {
             return;
         }
 
-        rolePermissions.removeIf(existing -> permissions.stream()
-                .noneMatch(np -> np.getPermission().getCode().equals(existing.getPermission().getCode())));
+        rolePermissions.removeIf(existing -> permissions.stream().noneMatch(np -> np.getPermission()
+                .getCode()
+                .equals(existing.getPermission().getCode())));
 
         for (RolePermission newPerm : permissions) {
             RolePermission existing = rolePermissions.stream()
-                    .filter(e -> e.getPermission().getCode().equals(newPerm.getPermission().getCode()))
+                    .filter(e -> e.getPermission()
+                            .getCode()
+                            .equals(newPerm.getPermission().getCode()))
                     .findFirst()
                     .orElse(null);
 

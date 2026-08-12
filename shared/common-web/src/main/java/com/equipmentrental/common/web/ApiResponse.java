@@ -2,13 +2,7 @@ package com.equipmentrental.common.web;
 
 import java.time.Instant;
 
-public record ApiResponse<T>(
-        boolean success,
-        Instant timestamp,
-        T data,
-        String message,
-        String traceId
-) {
+public record ApiResponse<T>(boolean success, Instant timestamp, T data, String message, String traceId) {
     public static <T> ApiResponse<T> success(T data) {
         return success(data, null);
     }

@@ -17,9 +17,11 @@ public class JwtAuthoritiesConverter implements Converter<Jwt, Collection<Grante
         }
         Set<String> authorityNames = new LinkedHashSet<>();
         CurrentUserProvider.toStringSet(jwt.getClaim("permissions")).forEach(authorityNames::add);
-        CurrentUserProvider.toStringSet(jwt.getClaim("roles")).forEach(role ->
-                authorityNames.add(role.startsWith("ROLE_") ? role : "ROLE_" + role)
-        );
-        return authorityNames.stream().map(SimpleGrantedAuthority::new).map(GrantedAuthority.class::cast).toList();
+        CurrentUserProvider.toStringSet(jwt.getClaim("roles"))
+                .forEach(role -> authorityNames.add(role.startsWith("ROLE_") ? role : "ROLE_" + role));
+        return authorityNames.stream()
+                .map(SimpleGrantedAuthority::new)
+                .map(GrantedAuthority.class::cast)
+                .toList();
     }
 }

@@ -7,10 +7,10 @@ import com.equipmentrental.rental.dto.response.DiscountCodeResponse;
 import com.equipmentrental.rental.dto.response.RentalPriceResponse;
 import com.equipmentrental.rental.service.PricingService;
 import jakarta.validation.Valid;
+import java.util.List;
 import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -53,7 +53,8 @@ public class PricingController {
 
     @PutMapping("/discount-codes/{id}")
     @PreAuthorize("hasAuthority('rental.discount.manage')")
-    ApiResponse<DiscountCodeResponse> updateDiscount(@PathVariable Long id, @Valid @RequestBody DiscountCodeRequest request) {
+    ApiResponse<DiscountCodeResponse> updateDiscount(
+            @PathVariable Long id, @Valid @RequestBody DiscountCodeRequest request) {
         return ApiResponse.success(s.updateDiscount(id, request));
     }
 

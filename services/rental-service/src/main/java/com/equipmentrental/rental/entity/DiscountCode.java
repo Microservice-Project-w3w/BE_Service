@@ -5,37 +5,51 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "discount_codes", uniqueConstraints = @UniqueConstraint(
-        name = "uk_discount_code_organization_branch_code",
-        columnNames = {"organization_id", "branch_id", "code"}
-))
+@Table(
+        name = "discount_codes",
+        uniqueConstraints =
+                @UniqueConstraint(
+                        name = "uk_discount_code_organization_branch_code",
+                        columnNames = {"organization_id", "branch_id", "code"}))
 public class DiscountCode {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     @Column(nullable = false)
     private Long organizationId;
+
     @Column(nullable = false)
     private Long branchId;
+
     @Column(nullable = false, length = 50)
     private String code;
+
     @Column(nullable = false, length = 150)
     private String name;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private DiscountType discountType;
+
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal discountValue;
+
     @Column(precision = 15, scale = 2)
     private BigDecimal maxDiscount;
+
     @Column(precision = 15, scale = 2)
     private BigDecimal minOrderValue;
+
     @Column(length = 50)
     private String customerGroup;
+
     @Column(nullable = false)
     private LocalDateTime validFrom;
+
     @Column(nullable = false)
     private LocalDateTime validTo;
+
     @Column(nullable = false)
     private Boolean active = true;
 

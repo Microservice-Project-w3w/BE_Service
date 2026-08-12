@@ -11,27 +11,38 @@ public class RentalRequest {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     @Column(nullable = false)
     private Long organizationId;
+
     @Column(nullable = false)
     private Long branchId;
+
     @Column(nullable = false, unique = true, length = 50)
     private String requestCode;
+
     @Column(nullable = false)
     private Long customerId;
+
     @Column(nullable = false)
     private LocalDateTime startAt;
+
     @Column(nullable = false)
     private LocalDateTime endAt;
+
     @Column(length = 500)
     private String deliveryAddress;
+
     @Column(length = 1000)
     private String note;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private RequestStatus status = RequestStatus.SUBMITTED;
+
     @OneToMany(mappedBy = "rentalRequest", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RentalRequestItem> items = new ArrayList<>();
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

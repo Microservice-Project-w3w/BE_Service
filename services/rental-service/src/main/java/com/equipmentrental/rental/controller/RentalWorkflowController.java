@@ -3,21 +3,21 @@ package com.equipmentrental.rental.controller;
 import com.equipmentrental.common.web.ApiResponse;
 import com.equipmentrental.rental.dto.QuotationCreate;
 import com.equipmentrental.rental.dto.request.CancelOrderRequest;
-import com.equipmentrental.rental.dto.request.RentalRequestCreate;
-import com.equipmentrental.rental.dto.request.ReserveOrderRequest;
-import com.equipmentrental.rental.dto.request.RentalRequestUpdate;
 import com.equipmentrental.rental.dto.request.QuotationUpdate;
+import com.equipmentrental.rental.dto.request.RentalRequestCreate;
+import com.equipmentrental.rental.dto.request.RentalRequestUpdate;
+import com.equipmentrental.rental.dto.request.ReserveOrderRequest;
 import com.equipmentrental.rental.dto.response.QuotationResponse;
 import com.equipmentrental.rental.dto.response.RentalOrderResponse;
 import com.equipmentrental.rental.dto.response.RentalRequestResponse;
 import com.equipmentrental.rental.service.RentalWorkflowService;
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.validation.Valid;
+import java.time.LocalDateTime;
+import java.util.*;
 import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import java.time.LocalDateTime;
-import java.util.*;
-import com.fasterxml.jackson.databind.JsonNode;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -30,16 +30,23 @@ public class RentalWorkflowController {
 
     @GetMapping("/availability")
     @PreAuthorize("hasAuthority('inventory.availability.read')")
-    ApiResponse<JsonNode> availability(@RequestParam Long organizationId, @RequestParam Long branchId, @RequestParam Long equipmentTypeId, @RequestParam LocalDateTime startAt,
-                                     @RequestParam LocalDateTime endAt, @RequestParam Integer quantity) {
+    ApiResponse<JsonNode> availability(
+            @RequestParam Long organizationId,
+            @RequestParam Long branchId,
+            @RequestParam Long equipmentTypeId,
+            @RequestParam LocalDateTime startAt,
+            @RequestParam LocalDateTime endAt,
+            @RequestParam Integer quantity) {
         return ApiResponse.success(s.availability(organizationId, branchId, equipmentTypeId, startAt, endAt, quantity));
     }
 
     @GetMapping("/equipment/search")
     @PreAuthorize("hasAuthority('inventory.equipment.read')")
-    ApiResponse<Map<String, Object>> search(@RequestParam(required = false) String keyword,
-                               @RequestParam(required = false) Long equipmentTypeId, @RequestParam(required = false) String brand,
-                               @RequestParam(required = false) String status) {
+    ApiResponse<Map<String, Object>> search(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long equipmentTypeId,
+            @RequestParam(required = false) String brand,
+            @RequestParam(required = false) String status) {
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("keyword", keyword);
         response.put("equipmentTypeId", equipmentTypeId);
@@ -70,7 +77,8 @@ public class RentalWorkflowController {
 
     @PutMapping("/rental-requests/{id}")
     @PreAuthorize("hasAuthority('rental.request.update')")
-    ApiResponse<RentalRequestResponse> updateRequest(@PathVariable Long id, @Valid @RequestBody RentalRequestUpdate request) {
+    ApiResponse<RentalRequestResponse> updateRequest(
+            @PathVariable Long id, @Valid @RequestBody RentalRequestUpdate request) {
         return ApiResponse.success(s.updateRequest(id, request));
     }
 
@@ -118,7 +126,9 @@ public class RentalWorkflowController {
 
     @PatchMapping("/quotations/{id}/reject")
     @PreAuthorize("hasAuthority('rental.quotation.reject')")
-    ApiResponse<QuotationResponse> reject(@PathVariable Long id) { return ApiResponse.success(s.rejectQuotation(id)); }
+    ApiResponse<QuotationResponse> reject(@PathVariable Long id) {
+        return ApiResponse.success(s.rejectQuotation(id));
+    }
 
     @PostMapping("/quotations/{id}/convert-to-order")
     @PreAuthorize("hasAuthority('rental.order.create')")
@@ -140,7 +150,9 @@ public class RentalWorkflowController {
 
     @PatchMapping("/rental-orders/{id}/confirm")
     @PreAuthorize("hasAuthority('inventory.reservation.confirm')")
-    ApiResponse<RentalOrderResponse> confirm(@PathVariable Long id) { return ApiResponse.success(s.confirmOrder(id)); }
+    ApiResponse<RentalOrderResponse> confirm(@PathVariable Long id) {
+        return ApiResponse.success(s.confirmOrder(id));
+    }
 
     @PatchMapping("/rental-orders/{id}/cancel")
     @PreAuthorize("hasAuthority('rental.order.cancel')")

@@ -5,51 +5,68 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "rental_prices", uniqueConstraints = @UniqueConstraint(
-        name = "uk_rental_price_equipment_unit_valid_from",
-        columnNames = {"equipment_type_id", "rental_unit", "organization_id", "branch_id", "valid_from"}
-))
+@Table(
+        name = "rental_prices",
+        uniqueConstraints =
+                @UniqueConstraint(
+                        name = "uk_rental_price_equipment_unit_valid_from",
+                        columnNames = {"equipment_type_id", "rental_unit", "organization_id", "branch_id", "valid_from"
+                        }))
 public class RentalPrice {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     @Column(nullable = false)
     private Long organizationId;
+
     @Column(nullable = false)
     private Long branchId;
+
     @Column(nullable = false, length = 150)
     private String priceName;
+
     @Column(nullable = false)
     private Long equipmentTypeId;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private RentalUnit rentalUnit;
+
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal rentalPrice;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private DepositType depositType;
+
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal depositValue;
+
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal lateFee;
+
     @Column(nullable = false)
     private LocalDateTime validFrom;
+
     private LocalDateTime validTo;
+
     @Column(nullable = false)
     private Boolean active = true;
+
     @Column(length = 500)
     private String description;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
     @PrePersist
     void prePersist() {
         createdAt = updatedAt = LocalDateTime.now();
-        if (active == null)
-            active = true;
+        if (active == null) active = true;
     }
 
     @PreUpdate

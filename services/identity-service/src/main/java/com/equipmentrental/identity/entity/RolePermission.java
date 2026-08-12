@@ -17,11 +17,10 @@ import jakarta.persistence.UniqueConstraint;
 @Entity
 @Table(
         name = "role_permissions",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uq_role_permissions_role_permission",
-                columnNames = {"role_id", "permission_id"}
-        )
-)
+        uniqueConstraints =
+                @UniqueConstraint(
+                        name = "uq_role_permissions_role_permission",
+                        columnNames = {"role_id", "permission_id"}))
 public class RolePermission {
 
     @Id
@@ -40,17 +39,21 @@ public class RolePermission {
     @Column(name = "data_scope", nullable = false, length = 20)
     private DataScope dataScope;
 
-    protected RolePermission() {
-    }
+    protected RolePermission() {}
 
     public RolePermission(Role role, Permission permission, DataScope dataScope) {
         this.role = role;
         this.permission = permission;
         this.dataScope = dataScope;
     }
-    public Long getId() {return id;}
 
-    public Role getRole() {return role;}
+    public Long getId() {
+        return id;
+    }
+
+    public Role getRole() {
+        return role;
+    }
 
     public Permission getPermission() {
         return permission;
@@ -67,5 +70,4 @@ public class RolePermission {
     public void setRole(Role role) {
         this.role = role;
     }
-    }
-
+}

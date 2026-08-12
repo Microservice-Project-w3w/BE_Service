@@ -11,8 +11,7 @@ public record ApiErrorResponse(
         String message,
         String path,
         String traceId,
-        List<ApiErrorDetail> details
-) {
+        List<ApiErrorDetail> details) {
     public static ApiErrorResponse of(ErrorCode errorCode, String message, String path, List<ApiErrorDetail> details) {
         ErrorCode resolvedErrorCode = errorCode == null ? CommonErrorCode.SYSTEM_INTERNAL_ERROR : errorCode;
         return new ApiErrorResponse(
@@ -23,8 +22,7 @@ public record ApiErrorResponse(
                 resolvedMessage(resolvedErrorCode, message),
                 path,
                 TraceIdProvider.currentTraceId(),
-                details == null ? List.of() : List.copyOf(details)
-        );
+                details == null ? List.of() : List.copyOf(details));
     }
 
     private static String resolvedMessage(ErrorCode errorCode, String message) {
