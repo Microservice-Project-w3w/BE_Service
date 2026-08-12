@@ -62,6 +62,42 @@ spring:
           filters:
             - SetPath=/health
 
+        # ==================================================
+        # ORGANIZATION CUSTOMER SERVICE - PORT 8082
+        # ==================================================
+
+        # Doanh nghiệp, chi nhánh, nhân viên, khách hàng và nhóm khách hàng
+        - id: organization-customer-api
+          uri: ${ORGANIZATION_CUSTOMER_SERVICE_URL:http://localhost:8082}
+          predicates:
+            - Path=/api/v1/organizations,/api/v1/organizations/**
+
+        # Health của Organization Customer
+        - id: organization-customer-health
+          uri: ${ORGANIZATION_CUSTOMER_SERVICE_URL:http://localhost:8082}
+          predicates:
+            - Path=/gateway/health/organization-customer
+          filters:
+            - SetPath=/health
+
+        # ==================================================
+        # LOGISTICS SERVICE - PORT 8085
+        # ==================================================
+
+        # Phí giao nhận, nhiệm vụ giao nhận, phiếu xuất, bàn giao và nhận trả
+        - id: logistics-api
+          uri: ${LOGISTICS_SERVICE_URL:http://localhost:8085}
+          predicates:
+            - Path=/api/v1/logistics,/api/v1/logistics/**
+
+        # Health của Logistics
+        - id: logistics-health
+          uri: ${LOGISTICS_SERVICE_URL:http://localhost:8085}
+          predicates:
+            - Path=/gateway/health/logistics
+          filters:
+            - SetPath=/health
+
       # Tránh lặp header CORS nếu service phía sau cũng trả CORS
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin RETAIN_UNIQUE
