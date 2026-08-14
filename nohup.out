@@ -1,0 +1,19 @@
+[[1;34mINFO[m] Scanning for projects...
+[90mDownloading from [0mcentral[90m: https://repo.maven.apache.org/maven2/[0morg/flywaydb/maven-metadata.xml
+[90mDownloading from [0mcentral[90m: https://repo.maven.apache.org/maven2/[0mio/github/git-commit-id/maven-metadata.xml
+[90mDownloading from [0mcentral[90m: https://repo.maven.apache.org/maven2/[0morg/springframework/boot/maven-metadata.xml
+[90mDownloading from [0mcentral[90m: https://repo.maven.apache.org/maven2/[0morg/cyclonedx/maven-metadata.xml
+Progress (1): 249 BProgress (2): 249 B | 243 BProgress (3): 249 B | 243 B | 255 BProgress (4): 249 B | 243 B | 255 B | 234 B                                           Downloaded[90m from [0mcentral[90m: https://repo.maven.apache.org/maven2/[0morg/flywaydb/maven-metadata.xml[90m (234 B at 47 B/s)[0m
+Downloaded[90m from [0mcentral[90m: https://repo.maven.apache.org/maven2/[0mio/github/git-commit-id/maven-metadata.xml[90m (255 B at 51 B/s)[0m
+Downloaded[90m from [0mcentral[90m: https://repo.maven.apache.org/maven2/[0morg/cyclonedx/maven-metadata.xml[90m (243 B at 49 B/s)[0m
+Downloaded[90m from [0mcentral[90m: https://repo.maven.apache.org/maven2/[0morg/springframework/boot/maven-metadata.xml[90m (249 B at 50 B/s)[0m
+[90mDownloading from [0mcentral[90m: https://repo.maven.apache.org/maven2/[0morg/jooq/maven-metadata.xml
+[90mDownloading from [0mcentral[90m: https://repo.maven.apache.org/maven2/[0morg/jetbrains/kotlin/maven-metadata.xml
+[90mDownloading from [0mcentral[90m: https://repo.maven.apache.org/maven2/[0morg/liquibase/maven-metadata.xml
+[90mDownloading from [0mcentral[90m: https://repo.maven.apache.org/maven2/[0morg/graalvm/buildtools/maven-metadata.xml
+Progress (1): 242 BProgress (2): 242 B | 375 BProgress (3): 242 B | 375 B | 398 BProgress (4): 242 B | 375 B | 398 B | 394 B                                           Downloaded[90m from [0mcentral[90m: https://repo.maven.apache.org/maven2/[0morg/jooq/maven-metadata.xml[90m (398 B at 260 B/s)[0m
+Downloaded[90m from [0mcentral[90m: https://repo.maven.apache.org/maven2/[0morg/liquibase/maven-metadata.xml[90m (394 B at 258 B/s)[0m
+Downloaded[90m from [0mcentral[90m: https://repo.maven.apache.org/maven2/[0morg/jetbrains/kotlin/maven-metadata.xml[90m (375 B at 245 B/s)[0m
+[90mDownloading from [0mcentral[90m: https://repo.maven.apache.org/maven2/[0morg/apache/maven/plugins/maven-metadata.xml
+[90mDownloading from [0mcentral[90m: https://repo.maven.apache.org/maven2/[0morg/codehaus/mojo/maven-metadata.xml
+Downloaded[90m from [0mcentral[90m: https://repo.maven.apache.org/maven2/[0morg/graalvm/buildtools/maven-metadata.xml[90m (242 B at 158 B/s)[0m

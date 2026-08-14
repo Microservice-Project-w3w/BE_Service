@@ -4,40 +4,134 @@ server:
 spring:
   application:
     name: api-gateway
+
   cloud:
     gateway:
       routes:
-        - id: identity-service
+        # ==================================================
+        # IDENTITY SERVICE - PORT 8081
+        # ==================================================
+
+        # Đăng ký, đăng nhập, refresh token, xác minh email...
+        - id: identity-auth
           uri: ${IDENTITY_SERVICE_URL:http://localhost:8081}
           predicates:
-            - Path=/api/auth/**,/api/users/**,/api/roles/**
-        - id: organization-customer-service
-          uri: ${ORGANIZATION_CUSTOMER_SERVICE_URL:http://localhost:8082}
+            - Path=/api/v1/auth,/api/v1/auth/**
+
+        # Quản lý role, permission, user và session
+        - id: identity-management
+          uri: ${IDENTITY_SERVICE_URL:http://localhost:8081}
           predicates:
-            - Path=/api/organizations/**,/api/branches/**,/api/employees/**,/api/customers/**
-        - id: inventory-service
-          uri: ${INVENTORY_SERVICE_URL:http://localhost:8083}
+            - Path=/api/v1/roles,/api/v1/roles/**,/api/v1/permissions,/api/v1/permissions/**,/api/v1/users,/api/v1/users/**,/api/v1/sessions,/api/v1/sessions/**
+
+        # Health của Identity
+        - id: identity-health
+          uri: ${IDENTITY_SERVICE_URL:http://localhost:8081}
           predicates:
-            - Path=/api/equipments/**,/api/warehouses/**,/api/categories/**
-        - id: rental-service
+            - Path=/gateway/health/identity
+          filters:
+            - SetPath=/health
+
+        # ==================================================
+        # RENTAL SERVICE - PORT 8084
+        # ==================================================
+
+        # Bảng giá và mã giảm giá
+        - id: rental-pricing
           uri: ${RENTAL_SERVICE_URL:http://localhost:8084}
           predicates:
-            - Path=/api/rentals/**,/api/quotations/**,/api/contracts/**
-        - id: logistics-service
+            - Path=/api/v1/rental-prices,/api/v1/rental-prices/**,/api/v1/discount-codes,/api/v1/discount-codes/**
+
+        # Tra cứu thiết bị và quy trình thuê
+        - id: rental-workflow
+          uri: ${RENTAL_SERVICE_URL:http://localhost:8084}
+          predicates:
+            - Path=/api/v1/availability,/api/v1/equipment/search,/api/v1/rental-requests,/api/v1/rental-requests/**,/api/v1/quotations,/api/v1/quotations/**,/api/v1/rental-orders,/api/v1/rental-orders/**
+
+        # Hợp đồng, phụ lục và gia hạn
+        - id: rental-contract
+          uri: ${RENTAL_SERVICE_URL:http://localhost:8084}
+          predicates:
+            - Path=/api/v1/rental-contracts,/api/v1/rental-contracts/**
+
+        # Health của Rental
+        - id: rental-health
+          uri: ${RENTAL_SERVICE_URL:http://localhost:8084}
+          predicates:
+            - Path=/gateway/health/rental
+          filters:
+            - SetPath=/health
+
+        # ==================================================
+        # ORGANIZATION CUSTOMER SERVICE - PORT 8082
+        # ==================================================
+
+        # Doanh nghiệp, chi nhánh, nhân viên, khách hàng và nhóm khách hàng
+        - id: organization-customer-api
+          uri: ${ORGANIZATION_CUSTOMER_SERVICE_URL:http://localhost:8082}
+          predicates:
+            - Path=/api/v1/organizations,/api/v1/organizations/**
+
+        # Health của Organization Customer
+        - id: organization-customer-health
+          uri: ${ORGANIZATION_CUSTOMER_SERVICE_URL:http://localhost:8082}
+          predicates:
+            - Path=/gateway/health/organization-customer
+          filters:
+            - SetPath=/health
+
+        # ==================================================
+        # LOGISTICS SERVICE - PORT 8085
+        # ==================================================
+
+        # Phí giao nhận, nhiệm vụ giao nhận, phiếu xuất, bàn giao và nhận trả
+        - id: logistics-api
           uri: ${LOGISTICS_SERVICE_URL:http://localhost:8085}
           predicates:
-            - Path=/api/deliveries/**,/api/returns/**
-        - id: billing-service
-          uri: ${BILLING_SERVICE_URL:http://localhost:8086}
+            - Path=/api/v1/logistics,/api/v1/logistics/**
+
+        # Health của Logistics
+        - id: logistics-health
+          uri: ${LOGISTICS_SERVICE_URL:http://localhost:8085}
           predicates:
-            - Path=/api/invoices/**,/api/payments/**,/api/deposits/**
-        - id: maintenance-service
-          uri: ${MAINTENANCE_SERVICE_URL:http://localhost:8087}
-          predicates:
-            - Path=/api/maintenance/**,/api/repairs/**,/api/incidents/**
+            - Path=/gateway/health/logistics
+          filters:
+            - SetPath=/health
+
+      # Tránh lặp header CORS nếu service phía sau cũng trả CORS
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin RETAIN_UNIQUE
+
+      # Cho phép frontend React gọi Gateway
+      globalcors:
+        add-to-simple-url-handler-mapping: true
+        cors-configurations:
+          '[/**]':
+            allowedOrigins:
+              - ${FRONTEND_URL:http://localhost:5173}
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - PATCH
+              - DELETE
+              - OPTIONS
+            allowedHeaders:
+              - "*"
+            exposedHeaders:
+              - Authorization
+              - X-Trace-Id
+            allowCredentials: true
+            maxAge: 3600
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include:
+          - health
+          - info
+
+  endpoint:
+    health:
+      show-details: always

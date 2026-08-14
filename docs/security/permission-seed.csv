@@ -1,0 +1,133 @@
+code,name,domain,description
+identity.user.read,Read users,identity,Xem người dùng
+identity.user.create,Create users,identity,Tạo người dùng
+identity.user.update,Update users,identity,Cập nhật người dùng
+identity.user.lock,Lock users,identity,Khóa người dùng
+identity.user.unlock,Unlock users,identity,Mở khóa người dùng
+identity.role.read,Read roles,identity,Xem vai trò
+identity.role.create,Create roles,identity,Tạo vai trò
+identity.role.update,Update roles,identity,Cập nhật vai trò
+identity.role.delete,Delete roles,identity,Xóa vai trò
+identity.permission.read,Read permissions,identity,Xem quyền
+identity.permission.assign,Assign permissions,identity,Gán quyền
+identity.session.read,Read sessions,identity,Xem phiên đăng nhập
+identity.session.revoke,Revoke sessions,identity,Thu hồi phiên đăng nhập
+organization.profile.read,Read organization profile,organization,Xem hồ sơ doanh nghiệp
+organization.profile.update,Update organization profile,organization,Cập nhật hồ sơ doanh nghiệp
+organization.branch.read,Read branches,organization,Xem chi nhánh
+organization.branch.create,Create branches,organization,Tạo chi nhánh
+organization.branch.update,Update branches,organization,Cập nhật chi nhánh
+organization.branch.lock,Lock branches,organization,Khóa chi nhánh
+organization.employee.read,Read employees,organization,Xem nhân viên
+organization.employee.create,Create employees,organization,Tạo nhân viên
+organization.employee.update,Update employees,organization,Cập nhật nhân viên
+organization.employee.assign-branch,Assign employee branch,organization,Phân công nhân viên theo chi nhánh
+customer.profile.read,Read customer profiles,customer,Xem khách hàng
+customer.profile.create,Create customer profiles,customer,Tạo khách hàng
+customer.profile.update,Update customer profiles,customer,Cập nhật khách hàng
+customer.group.read,Read customer groups,customer,Xem nhóm khách hàng
+customer.group.manage,Manage customer groups,customer,Quản lý nhóm khách hàng
+customer.history.read,Read customer history,customer,Xem lịch sử khách hàng
+customer.restriction.read,Read customer restrictions,customer,Xem hạn chế khách hàng
+customer.restriction.manage,Manage customer restrictions,customer,Quản lý hạn chế khách hàng
+inventory.catalog.read,Read equipment catalog,inventory,Xem danh mục thiết bị
+inventory.catalog.manage,Manage equipment catalog,inventory,Quản lý danh mục thiết bị
+inventory.brand.read,Read brands,inventory,Xem thương hiệu
+inventory.brand.manage,Manage brands,inventory,Quản lý thương hiệu
+inventory.model.read,Read models,inventory,Xem model
+inventory.model.manage,Manage models,inventory,Quản lý model
+inventory.equipment.read,Read equipment,inventory,Xem thiết bị
+inventory.equipment.create,Create equipment,inventory,Tạo thiết bị
+inventory.equipment.update,Update equipment,inventory,Cập nhật thiết bị
+inventory.equipment.change-status,Change equipment status,inventory,Đổi trạng thái thiết bị
+inventory.equipment.image.manage,Manage equipment images,inventory,Quản lý hình ảnh thiết bị
+inventory.equipment.accessory.manage,Manage equipment accessories,inventory,Quản lý phụ kiện thiết bị
+inventory.qr.generate,Generate QR,inventory,Tạo mã QR
+inventory.qr.print,Print QR,inventory,In mã QR
+inventory.warehouse.read,Read warehouses,inventory,Xem kho
+inventory.warehouse.manage,Manage warehouses,inventory,Quản lý kho
+inventory.stock.in,Stock in,inventory,Nhập kho
+inventory.stock.out,Stock out,inventory,Xuất kho
+inventory.stock.transfer,Transfer stock,inventory,Điều chuyển kho
+inventory.stock.audit,Audit stock,inventory,Kiểm kê kho
+inventory.availability.read,Read availability,inventory,Kiểm tra thiết bị khả dụng
+inventory.reservation.create,Create reservation,inventory,Tạo giữ chỗ thiết bị
+inventory.reservation.confirm,Confirm reservation,inventory,Xác nhận giữ chỗ thiết bị
+inventory.reservation.release,Release reservation,inventory,Giải phóng giữ chỗ thiết bị
+rental.pricing.read,Read rental pricing,rental,Xem bảng giá thuê
+rental.pricing.manage,Manage rental pricing,rental,Quản lý bảng giá thuê
+rental.deposit-policy.read,Read deposit policy,rental,Xem chính sách đặt cọc
+rental.deposit-policy.manage,Manage deposit policy,rental,Quản lý chính sách đặt cọc
+rental.late-fee-policy.read,Read late fee policy,rental,Xem chính sách phí trả trễ
+rental.late-fee-policy.manage,Manage late fee policy,rental,Quản lý chính sách phí trả trễ
+rental.discount.read,Read discounts,rental,Xem mã giảm giá
+rental.discount.manage,Manage discounts,rental,Quản lý mã giảm giá
+rental.request.create,Create rental requests,rental,Tạo yêu cầu thuê
+rental.request.read,Read rental requests,rental,Xem yêu cầu thuê
+rental.request.update,Update rental requests,rental,Cập nhật yêu cầu thuê
+rental.request.cancel,Cancel rental requests,rental,Hủy yêu cầu thuê
+rental.quotation.create,Create quotations,rental,Tạo báo giá
+rental.quotation.read,Read quotations,rental,Xem báo giá
+rental.quotation.update,Update quotations,rental,Cập nhật báo giá
+rental.quotation.send,Send quotations,rental,Gửi báo giá
+rental.quotation.approve,Approve quotations,rental,Phê duyệt báo giá
+rental.quotation.reject,Reject quotations,rental,Từ chối báo giá
+rental.quotation.accept,Accept quotations,rental,Chấp nhận báo giá
+rental.order.create,Create rental orders,rental,Tạo đơn thuê
+rental.order.read,Read rental orders,rental,Xem đơn thuê
+rental.order.cancel,Cancel rental orders,rental,Hủy đơn thuê
+rental.contract.create,Create contracts,rental,Tạo hợp đồng
+rental.contract.read,Read contracts,rental,Xem hợp đồng
+rental.contract.update,Update contracts,rental,Cập nhật hợp đồng
+rental.contract.approve,Approve contracts,rental,Phê duyệt hợp đồng
+rental.contract.sign,Sign contracts,rental,Ký hợp đồng
+rental.contract.extend,Extend contracts,rental,Gia hạn hợp đồng
+rental.contract.cancel,Cancel contracts,rental,Hủy hợp đồng
+rental.contract.liquidate,Liquidate contracts,rental,Thanh lý hợp đồng
+rental.contract.template.manage,Manage contract templates,rental,Quản lý mẫu hợp đồng
+rental.contract.appendix.manage,Manage contract appendices,rental,Quản lý phụ lục hợp đồng
+logistics.delivery.read,Read deliveries,logistics,Xem giao nhận
+logistics.delivery.create,Create deliveries,logistics,Tạo giao nhận
+logistics.delivery.assign,Assign deliveries,logistics,Phân công giao nhận
+logistics.delivery.schedule,Schedule deliveries,logistics,Lập lịch giao nhận
+logistics.delivery.inspect,Inspect deliveries,logistics,Kiểm tra giao nhận
+logistics.delivery.confirm,Confirm deliveries,logistics,Xác nhận giao nhận
+logistics.handover.create,Create handovers,logistics,Tạo biên bản bàn giao
+logistics.handover.read,Read handovers,logistics,Xem biên bản bàn giao
+logistics.return-request.create,Create return requests,logistics,Tạo yêu cầu trả
+logistics.return-request.read,Read return requests,logistics,Xem yêu cầu trả
+logistics.return.inspect,Inspect returns,logistics,Kiểm tra khi trả
+logistics.return.confirm,Confirm returns,logistics,Xác nhận nhận trả
+logistics.delivery-fee.read,Read delivery fees,logistics,Xem phí giao nhận
+logistics.delivery-fee.manage,Manage delivery fees,logistics,Quản lý phí giao nhận
+billing.invoice.read,Read invoices,billing,Xem hóa đơn
+billing.invoice.create,Create invoices,billing,Tạo hóa đơn
+billing.invoice.update,Update invoices,billing,Cập nhật hóa đơn
+billing.payment.read,Read payments,billing,Xem thanh toán
+billing.payment.collect,Collect payments,billing,Thu tiền
+billing.payment.confirm,Confirm payments,billing,Xác nhận thanh toán
+billing.payment.refund,Refund payments,billing,Hoàn tiền thanh toán
+billing.deposit.read,Read deposits,billing,Xem tiền đặt cọc
+billing.deposit.collect,Collect deposits,billing,Thu tiền đặt cọc
+billing.deposit.refund,Refund deposits,billing,Hoàn tiền đặt cọc
+billing.deposit.deduct,Deduct deposits,billing,Khấu trừ tiền đặt cọc
+billing.debt.read,Read debt,billing,Xem công nợ
+billing.debt.manage,Manage debt,billing,Quản lý công nợ
+billing.report.read,Read billing reports,billing,Xem báo cáo tài chính
+maintenance.schedule.read,Read maintenance schedules,maintenance,Xem lịch bảo trì
+maintenance.schedule.manage,Manage maintenance schedules,maintenance,Quản lý lịch bảo trì
+maintenance.ticket.create,Create maintenance tickets,maintenance,Tạo phiếu bảo trì
+maintenance.ticket.read,Read maintenance tickets,maintenance,Xem phiếu bảo trì
+maintenance.ticket.update,Update maintenance tickets,maintenance,Cập nhật phiếu bảo trì
+maintenance.ticket.assign,Assign maintenance tickets,maintenance,Phân công phiếu bảo trì
+maintenance.ticket.complete,Complete maintenance tickets,maintenance,Hoàn thành phiếu bảo trì
+maintenance.repair.create,Create repairs,maintenance,Tạo phiếu sửa chữa
+maintenance.repair.read,Read repairs,maintenance,Xem phiếu sửa chữa
+maintenance.repair.update,Update repairs,maintenance,Cập nhật phiếu sửa chữa
+maintenance.part.read,Read parts,maintenance,Xem linh kiện
+maintenance.part.manage,Manage parts,maintenance,Quản lý linh kiện
+maintenance.incident.create,Create incidents,maintenance,Báo cáo sự cố
+maintenance.incident.read,Read incidents,maintenance,Xem sự cố
+maintenance.incident.evaluate,Evaluate incidents,maintenance,Đánh giá hư hỏng
+maintenance.compensation.calculate,Calculate compensation,maintenance,Tính chi phí bồi thường
+maintenance.history.read,Read maintenance history,maintenance,Xem lịch sử kỹ thuật

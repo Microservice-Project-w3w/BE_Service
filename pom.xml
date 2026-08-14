@@ -1,9 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
     <modelVersion>4.0.0</modelVersion>
 
+    <!-- ===================================================== -->
+    <!-- SPRING BOOT PARENT                                    -->
+    <!-- ===================================================== -->
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
@@ -11,14 +17,22 @@
         <relativePath/>
     </parent>
 
+    <!-- ===================================================== -->
+    <!-- PROJECT INFO                                          -->
+    <!-- ===================================================== -->
     <groupId>com.equipmentrental</groupId>
     <artifactId>equipment-rental-backend</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
+
     <name>equipment-rental-backend</name>
 
+    <!-- ===================================================== -->
+    <!-- MODULES                                               -->
+    <!-- ===================================================== -->
     <modules>
         <module>api-gateway</module>
+
         <module>services/identity-service</module>
         <module>services/organization-customer-service</module>
         <module>services/inventory-service</module>
@@ -26,21 +40,46 @@
         <module>services/logistics-service</module>
         <module>services/billing-service</module>
         <module>services/maintenance-service</module>
+
         <module>shared/common-web</module>
         <module>shared/common-security</module>
         <module>shared/event-contracts</module>
     </modules>
 
+    <!-- ===================================================== -->
+    <!-- PROPERTIES                                            -->
+    <!-- ===================================================== -->
     <properties>
+
+        <!-- Project vẫn target Java 21 -->
         <java.version>21</java.version>
         <maven.compiler.release>21</maven.compiler.release>
+
+        <!--
+            Máy bạn đang chạy JDK 23.
+            proc=full giúp annotation processor như Lombok được chạy.
+        -->
+        <maven.compiler.proc>full</maven.compiler.proc>
+
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
         <spring-cloud.version>2024.0.0</spring-cloud.version>
+
     </properties>
 
+    <!-- ===================================================== -->
+    <!-- DEPENDENCY MANAGEMENT                                 -->
+    <!-- ===================================================== -->
     <dependencyManagement>
         <dependencies>
+
+            <!--
+                Spring Boot dependencies đã được quản lý
+                bởi spring-boot-starter-parent phía trên.
+
+                Chỉ cần import Spring Cloud BOM ở đây.
+            -->
             <dependency>
                 <groupId>org.springframework.cloud</groupId>
                 <artifactId>spring-cloud-dependencies</artifactId>
@@ -48,27 +87,62 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+
         </dependencies>
     </dependencyManagement>
 
+    <!-- ===================================================== -->
+    <!-- BUILD                                                 -->
+    <!-- ===================================================== -->
     <build>
+        <plugins>
+            <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+                <version>2.43.0</version>
+                <configuration>
+                    <java>
+                        <removeUnusedImports/>
+                        <importOrder/>
+                        <palantirJavaFormat/>
+                    </java>
+                </configuration>
+            </plugin>
+        </plugins>
         <pluginManagement>
             <plugins>
+
+                <!-- Maven Compiler -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
                     <version>3.13.0</version>
+
                     <configuration>
+
                         <release>${maven.compiler.release}</release>
-                        <encoding>${project.build.sourceEncoding}</encoding>
+
+                        <encoding>
+                            ${project.build.sourceEncoding}
+                        </encoding>
+
                         <parameters>true</parameters>
+
+                        <!-- Quan trọng khi Maven chạy bằng JDK 23 -->
+                        <proc>${maven.compiler.proc}</proc>
+
                     </configuration>
                 </plugin>
+
+                <!-- Spring Boot -->
                 <plugin>
                     <groupId>org.springframework.boot</groupId>
                     <artifactId>spring-boot-maven-plugin</artifactId>
                 </plugin>
+
             </plugins>
         </pluginManagement>
+
     </build>
+
 </project>

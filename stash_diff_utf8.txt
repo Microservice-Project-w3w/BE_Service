@@ -1,0 +1,257 @@
+﻿diff --git a/services/identity-service/src/main/java/com/equipmentrental/identity/config/PermissionDataInitializer.java b/services/identity-service/src/main/java/com/equipmentrental/identity/config/PermissionDataInitializer.java
+index f6100e3..a6b4063 100644
+--- a/services/identity-service/src/main/java/com/equipmentrental/identity/config/PermissionDataInitializer.java
++++ b/services/identity-service/src/main/java/com/equipmentrental/identity/config/PermissionDataInitializer.java
+@@ -19,7 +19,7 @@ import org.springframework.context.annotation.Bean;
+ import org.springframework.context.annotation.Configuration;
+ import org.springframework.core.annotation.Order;
+ import org.springframework.core.io.ClassPathResource;
+-
++import com.equipmentrental.identity.repository.RolePermissionRepository;
+ @Configuration
+ public class PermissionDataInitializer {
+ 
+@@ -30,11 +30,12 @@ public class PermissionDataInitializer {
+     @Order(2)
+     ApplicationRunner initialPermissionData(
+             PermissionRepository permissionRepository,
+-            RoleRepository roleRepository
++            RoleRepository roleRepository,
++            RolePermissionRepository rolePermissionRepository
+     ) {
+         return arguments -> {
+             Map<String, Permission> permissions = seedPermissions(permissionRepository);
+-            seedRolePermissions(roleRepository, permissions);
++            seedRolePermissions(roleRepository, permissions,  rolePermissionRepository);
+         };
+     }
+ 
+@@ -54,7 +55,7 @@ public class PermissionDataInitializer {
+         return result;
+     }
+ 
+-    private void seedRolePermissions(RoleRepository roleRepository, Map<String, Permission> permissions) throws IOException {
++    private void seedRolePermissions(RoleRepository roleRepository, Map<String, Permission> permissions, RolePermissionRepository rolePermissionRepository) throws IOException {
+         Map<String, Set<RolePermission>> assignments = new LinkedHashMap<>();
+         forEachDataLine(ROLE_PERMISSION_SEED, line -> {
+             String[] columns = line.split(",", 3);
+@@ -71,9 +72,24 @@ public class PermissionDataInitializer {
+                     .add(new RolePermission(role, permission, DataScope.valueOf(columns[2])));
+         });
+         assignments.forEach((roleCode, rolePermissions) -> {
+-            Role role = roleRepository.findByCode(roleCode).orElseThrow();
+-            role.replaceRolePermissions(rolePermissions);
+-            roleRepository.save(role);
++
++            Role role = roleRepository
++                    .findByCode(roleCode)
++                    .orElseThrow();
++
++            rolePermissions.forEach(rolePermission -> {
++
++                boolean exists =
++                        rolePermissionRepository
++                                .existsByRoleIdAndPermissionId(
++                                        role.getId(),
++                                        rolePermission.getPermission().getId()
++                                );
++
++                if (!exists) {
++                    rolePermissionRepository.save(rolePermission);
++                }
++            });
+         });
+     }
+ 
+diff --git a/services/identity-service/src/main/java/com/equipmentrental/identity/config/SecurityConfig.java b/services/identity-service/src/main/java/com/equipmentrental/identity/config/SecurityConfig.java
+index 7350990..feff52f 100644
+--- a/services/identity-service/src/main/java/com/equipmentrental/identity/config/SecurityConfig.java
++++ b/services/identity-service/src/main/java/com/equipmentrental/identity/config/SecurityConfig.java
+@@ -93,9 +93,8 @@ public class SecurityConfig {
+                                         "/api/v1/auth/register",
+                                         "/api/v1/auth/login",
+                                         "/api/v1/auth/refresh",
+-                                        "/api/v1/auth/verification-codes",
+-                                        "/api/v1/auth/verify-email",
+-                                        "/api/v1/auth/password-reset/**"
++                                        "/api/v1/auth/reset-password",
++                                        "/api/v1/auth/confirm-reset-password"
+                                 )
+                                 .permitAll()
+ 
+diff --git a/services/identity-service/src/main/java/com/equipmentrental/identity/controller/AuthController.java b/services/identity-service/src/main/java/com/equipmentrental/identity/controller/AuthController.java
+index a0e437a..6ab3bf3 100644
+--- a/services/identity-service/src/main/java/com/equipmentrental/identity/controller/AuthController.java
++++ b/services/identity-service/src/main/java/com/equipmentrental/identity/controller/AuthController.java
+@@ -95,12 +95,20 @@ public class AuthController {
+         return ApiResponse.success(response);
+     }
+ 
+-    @PostMapping("/password-reset/confirm")
+-    public ApiResponse<Void> confirmPasswordReset(@Valid @RequestBody ConfirmResetPasswordRequest request) {
+-        authService.resetPassword(request.email(), request.code(), request.newPassword());
+-        return ApiResponse.success(null, "Äáº·t láº¡i máº­t kháº©u thĂ nh cĂ´ng");
+-    }
++    @PostMapping("/reset-password")
++    public ApiResponse<Void> resetPassword(
++            @Valid @RequestBody ConfirmResetPasswordRequest request
++    ){
++        authService.resetPassword(
++                request.email(),
++                request.newPassword()
++        );
+ 
++        return ApiResponse.success(
++                null,
++                "Äáº·t láº¡i máº­t kháº©u thĂ nh cĂ´ng"
++        );
++    }
+     @PutMapping("/password")
+     public ApiResponse<Void> changePassword(JwtAuthenticationToken authentication,
+                                             @Valid @RequestBody ChangePasswordRequest request) {
+diff --git a/services/identity-service/src/main/java/com/equipmentrental/identity/dto/auth/ConfirmResetPasswordRequest.java b/services/identity-service/src/main/java/com/equipmentrental/identity/dto/auth/ConfirmResetPasswordRequest.java
+index 0611d05..5317e5e 100644
+--- a/services/identity-service/src/main/java/com/equipmentrental/identity/dto/auth/ConfirmResetPasswordRequest.java
++++ b/services/identity-service/src/main/java/com/equipmentrental/identity/dto/auth/ConfirmResetPasswordRequest.java
+@@ -5,7 +5,8 @@ import jakarta.validation.constraints.NotBlank;
+ import jakarta.validation.constraints.Pattern;
+ import jakarta.validation.constraints.Size;
+ 
+-public record ConfirmResetPasswordRequest(@NotBlank @Email String email,
+-                                          @NotBlank @Pattern(regexp = "\\d{6}") String code,
+-                                          @NotBlank @Size(min = 8, max = 72) String newPassword) {
++public record   ConfirmResetPasswordRequest(@NotBlank @Email String email,
++                                            @NotBlank
++                                            @Size(min = 8, max = 72)
++                                            String newPassword) {
+ }
+diff --git a/services/identity-service/src/main/java/com/equipmentrental/identity/repository/RolePermissionRepository.java b/services/identity-service/src/main/java/com/equipmentrental/identity/repository/RolePermissionRepository.java
+new file mode 100644
+index 0000000..909bc2e
+--- /dev/null
++++ b/services/identity-service/src/main/java/com/equipmentrental/identity/repository/RolePermissionRepository.java
+@@ -0,0 +1,15 @@
++package com.equipmentrental.identity.repository;
++
++import com.equipmentrental.identity.entity.RolePermission;
++import org.springframework.data.jpa.repository.JpaRepository;
++import org.springframework.stereotype.Repository;
++
++@Repository
++public interface RolePermissionRepository
++        extends JpaRepository<RolePermission, Long> {
++
++    boolean existsByRoleIdAndPermissionId(
++            Long roleId,
++            Long permissionId
++    );
++}
+\ No newline at end of file
+diff --git a/services/identity-service/src/main/java/com/equipmentrental/identity/repository/RoleRepository.java b/services/identity-service/src/main/java/com/equipmentrental/identity/repository/RoleRepository.java
+index 9605142..03935aa 100644
+--- a/services/identity-service/src/main/java/com/equipmentrental/identity/repository/RoleRepository.java
++++ b/services/identity-service/src/main/java/com/equipmentrental/identity/repository/RoleRepository.java
+@@ -6,6 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
+ import java.util.Optional;
+ 
+ public interface RoleRepository extends JpaRepository<Role, Long> {
+-
+     Optional<Role> findByCode(String code);
+ }
+\ No newline at end of file
+diff --git a/services/identity-service/src/main/java/com/equipmentrental/identity/service/AuthService.java b/services/identity-service/src/main/java/com/equipmentrental/identity/service/AuthService.java
+index c118d54..9824a1c 100644
+--- a/services/identity-service/src/main/java/com/equipmentrental/identity/service/AuthService.java
++++ b/services/identity-service/src/main/java/com/equipmentrental/identity/service/AuthService.java
+@@ -101,8 +101,8 @@ public class AuthService {
+         /*
+          * TĂ i khoáº£n chÆ°a Ä‘Æ°á»£c Ä‘Äƒng nháº­p cho tá»›i khi xĂ¡c minh Gmail.
+          */
+-        user.setStatus(UserStatus.PENDING);
+-        user.setEmailVerified(false);
++        user.setStatus(UserStatus.ACTIVE);
++        user.setEmailVerified(true);
+         user.setFailedLoginAttempts(0);
+ 
+         /*
+@@ -114,13 +114,13 @@ public class AuthService {
+         User savedUser = userRepository.save(user);
+         passwordHistoryRepository.save(new PasswordHistory(savedUser, savedUser.getPasswordHash(), "REGISTER"));
+ 
+-        String verificationCode = verificationService.issue(savedUser, VerificationService.PURPOSE_VERIFY_EMAIL);
++
+         return new RegisterResponse(
+                 savedUser.getId(),
+                 savedUser.getEmail(),
+                 savedUser.getStatus().name(),
+-                "ÄÄƒng kĂ½ thĂ nh cĂ´ng. Vui lĂ²ng xĂ¡c minh Gmail.",
+-                verificationCode
++                "ÄÄƒng kĂ½ thĂ nh cĂ´ng.",
++                null
+         );
+     }
+ 
+@@ -235,17 +235,42 @@ public class AuthService {
+     }
+ 
+     @Transactional
+-    public void resetPassword(String email, String code, String newPassword) {
+-        User user = verificationService.verify(normalizeEmail(email), VerificationService.PURPOSE_RESET_PASSWORD, code);
+-        user.setPasswordHash(passwordEncoder.encode(newPassword));
++    public void resetPassword(
++            String email,
++            String newPassword
++    ) {
++
++        User user = userRepository
++                .findByEmailIgnoreCase(normalizeEmail(email))
++                .orElseThrow(() ->
++                        new ResponseStatusException(
++                                HttpStatus.NOT_FOUND,
++                                "KhĂ´ng tĂ¬m tháº¥y tĂ i khoáº£n"
++                        )
++                );
++
++        user.setPasswordHash(
++                passwordEncoder.encode(newPassword)
++        );
++
+         user.setFailedLoginAttempts(0);
+         user.setLockedUntil(null);
+-        if (user.isEmailVerified()) {
+-            user.setStatus(UserStatus.ACTIVE);
+-        }
++        user.setStatus(UserStatus.ACTIVE);
++
+         userRepository.save(user);
+-        passwordHistoryRepository.save(new PasswordHistory(user, user.getPasswordHash(), "RESET_PASSWORD"));
+-        sessionService.revokeAllForUser(user.getId(), "PASSWORD_RESET");
++
++        passwordHistoryRepository.save(
++                new PasswordHistory(
++                        user,
++                        user.getPasswordHash(),
++                        "RESET_PASSWORD"
++                )
++        );
++
++        sessionService.revokeAllForUser(
++                user.getId(),
++                "PASSWORD_RESET"
++        );
+     }
+ 
+     @Transactional
+diff --git a/services/identity-service/src/main/resources/application.yml b/services/identity-service/src/main/resources/application.yml
+index 85e7d7d..74eb9bf 100644
+--- a/services/identity-service/src/main/resources/application.yml
++++ b/services/identity-service/src/main/resources/application.yml
+@@ -8,7 +8,7 @@ spring:
+   datasource:
+     url: ${DB_URL:jdbc:mysql://localhost:3306/identity_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh}
+     username: ${DB_USERNAME:root}
+-    password: ${DB_PASSWORD}
++    password: ${DB_PASSWORD:1234}
+ 
+ 
+   jpa:

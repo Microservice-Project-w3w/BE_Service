@@ -16,3 +16,18 @@ spring:
     properties:
       hibernate:
         format_sql: true
+
+security:
+  jwt:
+    issuer: ${JWT_ISSUER:identity-service}
+    access-token-minutes: ${JWT_ACCESS_TOKEN_MINUTES:15}
+    secret-base64: ${JWT_SECRET_BASE64:VGhpc0lzTXlTdXBlclNlY3JldEtleUZvckp3dDIwMjQhISE=}
+
+app:
+  security:
+    public-paths:
+      - /health
+      - /actuator/health
+      - /actuator/info
+  integration:
+    inventory-base-url: ${INVENTORY_SERVICE_URL:http://localhost:8083}
