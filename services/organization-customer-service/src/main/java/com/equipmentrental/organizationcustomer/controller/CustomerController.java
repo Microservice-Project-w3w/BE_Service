@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 
@@ -28,6 +29,7 @@ public class CustomerController {
     // =====================================================
 
     @PostMapping
+    @PreAuthorize("hasAuthority('customer.profile.create') and @organizationScope.canAccessOrganization(#organizationId)")
     @ResponseStatus(HttpStatus.CREATED)
     public CustomerResponse create(
 
@@ -58,6 +60,7 @@ public class CustomerController {
     // =====================================================
 
     @GetMapping
+    @PreAuthorize("hasAuthority('customer.profile.read') and @organizationScope.canAccessOrganization(#organizationId)")
     public List<CustomerResponse> getAll(
 
             @PathVariable Long organizationId,
@@ -93,6 +96,7 @@ public class CustomerController {
     // =====================================================
 
     @GetMapping("/{customerId}")
+    @PreAuthorize("hasAuthority('customer.profile.read') and @organizationScope.canAccessOrganization(#organizationId)")
     public CustomerResponse getById(
 
             @PathVariable Long organizationId,
@@ -115,6 +119,7 @@ public class CustomerController {
     // =====================================================
 
     @PutMapping("/{customerId}")
+    @PreAuthorize("hasAuthority('customer.profile.update') and @organizationScope.canAccessOrganization(#organizationId)")
     public CustomerResponse update(
 
             @PathVariable Long organizationId,
@@ -141,6 +146,7 @@ public class CustomerController {
     // =====================================================
 
     @DeleteMapping("/{customerId}")
+    @PreAuthorize("hasAuthority('customer.profile.update') and @organizationScope.canAccessOrganization(#organizationId)")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(
 
@@ -169,6 +175,7 @@ public class CustomerController {
     // =====================================================
 
     @GetMapping("/{customerId}/ownership")
+    @PreAuthorize("hasAuthority('customer.profile.read') and @organizationScope.canAccessOrganization(#organizationId)")
     public OwnershipResponse checkOwnership(
 
             @PathVariable Long organizationId,

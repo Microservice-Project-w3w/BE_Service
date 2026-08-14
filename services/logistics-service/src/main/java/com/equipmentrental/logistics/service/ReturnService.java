@@ -19,6 +19,7 @@ import com.equipmentrental.logistics.repository.ReturnInspectionRepository;
 import com.equipmentrental.logistics.repository.ReturnRecordItemRepository;
 import com.equipmentrental.logistics.repository.ReturnRecordRepository;
 import com.equipmentrental.logistics.repository.ReturnRequestRepository;
+import com.equipmentrental.logistics.security.LogisticsDataScopeGuard;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
@@ -31,16 +32,19 @@ public class ReturnService {
     private final ReturnRecordRepository recordRepository;
     private final ReturnRecordItemRepository itemRepository;
     private final ReturnInspectionRepository inspectionRepository;
+    private final LogisticsDataScopeGuard dataScopeGuard;
 
     public ReturnService(
             ReturnRequestRepository requestRepository,
             ReturnRecordRepository recordRepository,
             ReturnRecordItemRepository itemRepository,
-            ReturnInspectionRepository inspectionRepository) {
+            ReturnInspectionRepository inspectionRepository,
+            LogisticsDataScopeGuard dataScopeGuard) {
         this.requestRepository = requestRepository;
         this.recordRepository = recordRepository;
         this.itemRepository = itemRepository;
         this.inspectionRepository = inspectionRepository;
+        this.dataScopeGuard = dataScopeGuard;
     }
 
     // =========================================================
@@ -50,8 +54,12 @@ public class ReturnService {
     @Transactional
     public ReturnRequestResponse createReturnRequest(CreateReturnRequestRequest req) {
 
+        dataScopeGuard.requireCustomer(req.getOrganizationId(), req.getBranchId(), req.getCustomerId());
+
         ReturnRequest returnReq = new ReturnRequest();
 
+        returnReq.setOrganizationId(req.getOrganizationId());
+        returnReq.setBranchId(req.getBranchId());
         returnReq.setRentalOrderId(req.getRentalOrderId());
         returnReq.setCustomerId(req.getCustomerId());
         returnReq.setRequestedReturnDate(req.getRequestedReturnDate());
@@ -68,9 +76,7 @@ public class ReturnService {
     @Transactional
     public ReturnInspectionResponse createInspection(CreateReturnInspectionRequest req) {
 
-        ReturnRequest returnRequest = requestRepository
-                .findById(req.getReturnRequestId())
-                .orElseThrow(() -> new ResourceNotFoundException("Return Request not found"));
+        ReturnRequest returnRequest = findRequest(req.getReturnRequestId());
 
         if (returnRequest.getStatus() == ReturnRequestStatus.COMPLETED) {
 
@@ -83,7 +89,7 @@ public class ReturnService {
 
         inspection.setEquipmentId(req.getEquipmentId());
 
-        inspection.setInspectedByUserId(req.getInspectedByUserId());
+        inspection.setInspectedByUserId(dataScopeGuard.currentUserId());
 
         inspection.setInspectedAt(req.getInspectedAt());
 
@@ -113,9 +119,7 @@ public class ReturnService {
     @Transactional
     public ReturnRecordResponse createReturnRecord(CreateReturnRecordRequest req) {
 
-        ReturnRequest request = requestRepository
-                .findById(req.getReturnRequestId())
-                .orElseThrow(() -> new ResourceNotFoundException("Return Request not found"));
+        ReturnRequest request = findRequest(req.getReturnRequestId());
 
         if (request.getStatus() == ReturnRequestStatus.COMPLETED) {
 
@@ -128,7 +132,7 @@ public class ReturnService {
 
         record.setRentalOrderId(req.getRentalOrderId());
 
-        record.setInspectorStaffUserId(req.getInspectorStaffUserId());
+        record.setInspectorStaffUserId(dataScopeGuard.currentUserId());
 
         record.setActualReturnTime(req.getActualReturnTime());
 
@@ -182,6 +186,8 @@ public class ReturnService {
         ReturnRecord record = recordRepository
                 .findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Return Record not found"));
+
+        findRequest(record.getReturnRequestId());
 
         ReturnRecordResponse res = new ReturnRecordResponse();
 
@@ -293,6 +299,8 @@ public class ReturnService {
     @Transactional(readOnly = true)
     public List<ReturnRequestResponse> getReturnRequests() {
         return requestRepository.findAll().stream()
+                .filter(req -> dataScopeGuard.canAccessCustomer(
+                        req.getOrganizationId(), req.getBranchId(), req.getCustomerId()))
                 .map(this::mapToRequestResponse)
                 .collect(Collectors.toList());
     }
@@ -300,9 +308,7 @@ public class ReturnService {
     @Transactional(readOnly = true)
     public ReturnRequestResponse getReturnRequest(Long id) {
 
-        ReturnRequest request = requestRepository
-                .findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Return Request not found"));
+        ReturnRequest request = findRequest(id);
 
         return mapToRequestResponse(request);
     }
@@ -311,6 +317,7 @@ public class ReturnService {
     public List<ReturnInspectionResponse> getInspections() {
 
         return inspectionRepository.findAll().stream()
+                .filter(inspection -> canAccessRequest(inspection.getReturnRequestId()))
                 .map(this::mapToInspectionResponse)
                 .collect(Collectors.toList());
     }
@@ -322,6 +329,8 @@ public class ReturnService {
                 .findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Return Inspection not found"));
 
+        findRequest(inspection.getReturnRequestId());
+
         return mapToInspectionResponse(inspection);
     }
 
@@ -329,7 +338,23 @@ public class ReturnService {
     public List<ReturnRecordResponse> getReturnRecords() {
 
         return recordRepository.findAll().stream()
+                .filter(record -> canAccessRequest(record.getReturnRequestId()))
                 .map(record -> getReturnRecord(record.getId()))
                 .collect(Collectors.toList());
+    }
+
+    private ReturnRequest findRequest(Long id) {
+        ReturnRequest request = requestRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Return Request not found: " + id));
+        dataScopeGuard.requireCustomer(
+                request.getOrganizationId(), request.getBranchId(), request.getCustomerId());
+        return request;
+    }
+
+    private boolean canAccessRequest(Long id) {
+        return requestRepository.findById(id)
+                .map(request -> dataScopeGuard.canAccessCustomer(
+                        request.getOrganizationId(), request.getBranchId(), request.getCustomerId()))
+                .orElse(false);
     }
 }

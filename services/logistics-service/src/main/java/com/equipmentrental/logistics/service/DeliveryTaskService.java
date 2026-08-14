@@ -10,6 +10,7 @@ import com.equipmentrental.logistics.entity.enums.TaskStatus;
 import com.equipmentrental.logistics.exception.ResourceNotFoundException;
 
 import com.equipmentrental.logistics.repository.DeliveryTaskRepository;
+import com.equipmentrental.logistics.security.LogisticsDataScopeGuard;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,11 +24,14 @@ import java.util.stream.Collectors;
 public class DeliveryTaskService {
 
     private final DeliveryTaskRepository repository;
+    private final LogisticsDataScopeGuard dataScopeGuard;
 
     public DeliveryTaskService(
-            DeliveryTaskRepository repository
+            DeliveryTaskRepository repository,
+            LogisticsDataScopeGuard dataScopeGuard
     ) {
         this.repository = repository;
+        this.dataScopeGuard = dataScopeGuard;
     }
 
     // =====================================================
@@ -39,7 +43,12 @@ public class DeliveryTaskService {
             CreateDeliveryTaskRequest request
     ) {
 
+        dataScopeGuard.requireBranch(request.getOrganizationId(), request.getBranchId());
+
         DeliveryTask task = new DeliveryTask();
+
+        task.setOrganizationId(request.getOrganizationId());
+        task.setBranchId(request.getBranchId());
 
         task.setRentalOrderId(
                 request.getRentalOrderId()
@@ -73,26 +82,10 @@ public class DeliveryTaskService {
     @Transactional
     public DeliveryTaskResponse updateTaskStatus(
             Long taskId,
-            UpdateTaskStatusRequest request,
-            Long currentUserId
+            UpdateTaskStatusRequest request
     ) {
 
-        DeliveryTask task =
-                repository.findById(taskId)
-                        .orElseThrow(
-                                () -> new ResourceNotFoundException(
-                                        "Delivery task not found: " + taskId
-                                )
-                        );
-
-        // OWN scope
-        if (task.getDeliveryStaffUserId() == null
-                || !task.getDeliveryStaffUserId().equals(currentUserId)) {
-
-            throw new RuntimeException(
-                    "Unauthorized: You are not assigned to this delivery task"
-            );
-        }
+        DeliveryTask task = findTask(taskId);
 
         task.setStatus(
                 request.getStatus()
@@ -115,6 +108,7 @@ public class DeliveryTaskService {
         return repository
                 .findByDeliveryStaffUserId(staffUserId)
                 .stream()
+                .filter(task -> dataScopeGuard.canAccessBranch(task.getOrganizationId(), task.getBranchId()))
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -145,6 +139,7 @@ public class DeliveryTaskService {
                         end
                 )
                 .stream()
+                .filter(task -> dataScopeGuard.canAccessBranch(task.getOrganizationId(), task.getBranchId()))
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -159,6 +154,7 @@ public class DeliveryTaskService {
         return repository
                 .findAll()
                 .stream()
+                .filter(task -> dataScopeGuard.canAccessBranch(task.getOrganizationId(), task.getBranchId()))
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -172,13 +168,7 @@ public class DeliveryTaskService {
             Long id
     ) {
 
-        DeliveryTask task =
-                repository.findById(id)
-                        .orElseThrow(
-                                () -> new ResourceNotFoundException(
-                                        "Delivery task not found: " + id
-                                )
-                        );
+        DeliveryTask task = findTask(id);
 
         return mapToResponse(task);
     }
@@ -234,12 +224,7 @@ public class DeliveryTaskService {
             UpdateDeliveryTaskRequest request
     ) {
 
-        DeliveryTask task = repository.findById(id)
-                .orElseThrow(
-                        () -> new ResourceNotFoundException(
-                                "Delivery task not found: " + id
-                        )
-                );
+        DeliveryTask task = findTask(id);
 
         if (request.getDeliveryStaffUserId() != null) {
             task.setDeliveryStaffUserId(
@@ -256,5 +241,12 @@ public class DeliveryTaskService {
         return mapToResponse(
                 repository.save(task)
         );
+    }
+
+    private DeliveryTask findTask(Long id) {
+        DeliveryTask task = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Delivery task not found: " + id));
+        dataScopeGuard.requireBranch(task.getOrganizationId(), task.getBranchId());
+        return task;
     }
 }

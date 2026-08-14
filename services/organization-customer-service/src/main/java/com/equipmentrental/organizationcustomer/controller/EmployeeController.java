@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 
@@ -25,6 +26,7 @@ public class EmployeeController {
     // =====================================================
 
     @PostMapping
+    @PreAuthorize("hasAuthority('organization.employee.create') and @organizationScope.canAccessOrganization(#organizationId)")
     @ResponseStatus(HttpStatus.CREATED)
     public EmployeeResponse create(
 
@@ -46,6 +48,7 @@ public class EmployeeController {
     // =====================================================
 
     @GetMapping
+    @PreAuthorize("hasAuthority('organization.employee.read') and @organizationScope.canAccessOrganization(#organizationId)")
     public List<EmployeeResponse> getAll(
             @PathVariable Long organizationId
     ) {
@@ -61,6 +64,7 @@ public class EmployeeController {
     // =====================================================
 
     @GetMapping("/{employeeId}")
+    @PreAuthorize("hasAuthority('organization.employee.read') and @organizationScope.canAccessOrganization(#organizationId)")
     public EmployeeResponse getById(
 
             @PathVariable Long organizationId,
@@ -80,6 +84,7 @@ public class EmployeeController {
     // =====================================================
 
     @PutMapping("/{employeeId}")
+    @PreAuthorize("hasAuthority('organization.employee.update') and @organizationScope.canAccessOrganization(#organizationId)")
     public EmployeeResponse update(
 
             @PathVariable Long organizationId,
@@ -103,6 +108,7 @@ public class EmployeeController {
     // =====================================================
 
     @DeleteMapping("/{employeeId}")
+    @PreAuthorize("hasAuthority('organization.employee.update') and @organizationScope.canAccessOrganization(#organizationId)")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(
 

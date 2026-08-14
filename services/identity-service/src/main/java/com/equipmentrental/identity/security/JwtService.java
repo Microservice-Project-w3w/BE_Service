@@ -54,6 +54,10 @@ public class JwtService {
             claims.claim("organizationId", user.getOrganizationId());
         }
 
+        if (user.getCustomerId() != null) {
+            claims.claim("customerId", user.getCustomerId());
+        }
+
         JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
 
         JwtEncoderParameters parameters = JwtEncoderParameters.from(header, claims.build());

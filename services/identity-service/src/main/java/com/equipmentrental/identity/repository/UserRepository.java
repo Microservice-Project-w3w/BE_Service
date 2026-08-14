@@ -3,6 +3,7 @@ package com.equipmentrental.identity.repository;
 import com.equipmentrental.identity.entity.Role;
 import com.equipmentrental.identity.entity.User;
 import java.util.Optional;
+import java.util.List;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -19,6 +20,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @EntityGraph(attributePaths = {"role", "role.rolePermissions", "role.rolePermissions.permission"})
     Optional<User> findDetailedById(Long id);
+
+    @EntityGraph(attributePaths = {"role", "role.rolePermissions", "role.rolePermissions.permission"})
+    List<User> findAllByDeletedAtIsNullOrderByIdAsc();
 
     boolean existsByRoleId(Long roleId);
 

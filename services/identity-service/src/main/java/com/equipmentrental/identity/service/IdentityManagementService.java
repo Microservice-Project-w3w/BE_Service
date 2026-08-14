@@ -5,6 +5,8 @@ import com.equipmentrental.common.web.CommonErrorCode;
 import com.equipmentrental.identity.dto.request.PermissionRequest;
 import com.equipmentrental.identity.dto.request.RolePermissionRequest;
 import com.equipmentrental.identity.dto.request.RoleRequest;
+import com.equipmentrental.identity.dto.request.UserCreateRequest;
+import com.equipmentrental.identity.dto.request.UserScopeRequest;
 import com.equipmentrental.identity.dto.response.PermissionResponse;
 import com.equipmentrental.identity.dto.response.RoleResponse;
 import com.equipmentrental.identity.dto.response.UserResponse;
@@ -13,13 +15,17 @@ import com.equipmentrental.identity.entity.Role;
 import com.equipmentrental.identity.entity.RolePermission;
 import com.equipmentrental.identity.entity.User;
 import com.equipmentrental.identity.entity.UserStatus;
+import com.equipmentrental.identity.entity.PasswordHistory;
 import com.equipmentrental.identity.repository.PermissionRepository;
 import com.equipmentrental.identity.repository.RoleRepository;
 import com.equipmentrental.identity.repository.UserRepository;
+import com.equipmentrental.identity.repository.PasswordHistoryRepository;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -29,16 +35,22 @@ public class IdentityManagementService {
     private final PermissionRepository permissionRepository;
     private final UserRepository userRepository;
     private final SessionService sessionService;
+    private final PasswordEncoder passwordEncoder;
+    private final PasswordHistoryRepository passwordHistoryRepository;
 
     public IdentityManagementService(
             RoleRepository roleRepository,
             PermissionRepository permissionRepository,
             UserRepository userRepository,
-            SessionService sessionService) {
+            SessionService sessionService,
+            PasswordEncoder passwordEncoder,
+            PasswordHistoryRepository passwordHistoryRepository) {
         this.roleRepository = roleRepository;
         this.permissionRepository = permissionRepository;
         this.userRepository = userRepository;
         this.sessionService = sessionService;
+        this.passwordEncoder = passwordEncoder;
+        this.passwordHistoryRepository = passwordHistoryRepository;
     }
 
     @Transactional(readOnly = true)
@@ -140,6 +152,54 @@ public class IdentityManagementService {
         if (!role.isActive())
             throw new BusinessException(CommonErrorCode.VALIDATION_FAILED, "Vai trò đã bị vô hiệu hóa");
         user.setRole(role);
+        validateUserScope(user);
+        return userResponse(userRepository.save(user));
+    }
+
+    @Transactional(readOnly = true)
+    public List<UserResponse> users() {
+        return userRepository.findAllByDeletedAtIsNullOrderByIdAsc().stream()
+                .map(this::userResponse)
+                .toList();
+    }
+
+    public UserResponse createUser(UserCreateRequest request) {
+        String email = request.email().trim().toLowerCase(Locale.ROOT);
+        if (userRepository.existsByEmailIgnoreCase(email)) {
+            throw new BusinessException(CommonErrorCode.RESOURCE_CONFLICT, "Email đã được sử dụng");
+        }
+        Role role = roleRepository
+                .findByCode(request.roleCode().trim())
+                .orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND, "Không tìm thấy vai trò"));
+        if (!role.isActive()) {
+            throw new BusinessException(CommonErrorCode.VALIDATION_FAILED, "Vai trò đã bị vô hiệu hóa");
+        }
+
+        User user = new User();
+        user.setFullName(request.fullName().trim());
+        user.setEmail(email);
+        user.setPasswordHash(passwordEncoder.encode(request.password()));
+        user.setRole(role);
+        user.setOrganizationId(request.organizationId());
+        user.setBranchIds(request.branchIds());
+        user.setCustomerId(request.customerId());
+        user.setStatus(request.status() == null ? UserStatus.ACTIVE : request.status());
+        user.setEmailVerified(request.emailVerified() == null || request.emailVerified());
+        user.setFailedLoginAttempts(0);
+        validateUserScope(user);
+
+        User saved = userRepository.save(user);
+        passwordHistoryRepository.save(new PasswordHistory(saved, saved.getPasswordHash(), "ADMIN_CREATE"));
+        return userResponse(saved);
+    }
+
+    public UserResponse updateUserScope(Long id, UserScopeRequest request) {
+        User user = user(id);
+        user.setOrganizationId(request.organizationId());
+        user.setBranchIds(request.branchIds());
+        user.setCustomerId(request.customerId());
+        validateUserScope(user);
+        sessionService.revokeAllForUser(id, "SECURITY_SCOPE_CHANGED");
         return userResponse(userRepository.save(user));
     }
 
@@ -181,6 +241,18 @@ public class IdentityManagementService {
                         () -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND, "Không tìm thấy người dùng"));
     }
 
+    private void validateUserScope(User user) {
+        boolean customer = "CUSTOMER".equals(user.getRole().getCode());
+        if (!customer && user.getCustomerId() != null) {
+            throw new BusinessException(
+                    CommonErrorCode.VALIDATION_FAILED, "Chỉ tài khoản CUSTOMER mới được liên kết customerId");
+        }
+        if (!user.getBranchIds().isEmpty() && user.getOrganizationId() == null) {
+            throw new BusinessException(
+                    CommonErrorCode.VALIDATION_FAILED, "Phải có organizationId khi gán phạm vi chi nhánh");
+        }
+    }
+
     private PermissionResponse permissionResponse(Permission permission) {
         return new PermissionResponse(
                 permission.getId(),
@@ -214,6 +286,7 @@ public class IdentityManagementService {
                 user.getStatus(),
                 user.isEmailVerified(),
                 user.getOrganizationId(),
-                user.getBranchIds());
+                user.getBranchIds(),
+                user.getCustomerId());
     }
 }

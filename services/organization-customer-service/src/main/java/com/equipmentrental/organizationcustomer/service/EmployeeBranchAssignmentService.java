@@ -8,6 +8,7 @@ import com.equipmentrental.organizationcustomer.exception.BadRequestException;
 import com.equipmentrental.organizationcustomer.exception.ConflictException;
 import com.equipmentrental.organizationcustomer.exception.NotFoundException;
 import com.equipmentrental.organizationcustomer.repository.EmployeeBranchAssignmentRepository;
+import com.equipmentrental.organizationcustomer.security.OrganizationDataScopeGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +28,8 @@ public class EmployeeBranchAssignmentService {
     private final EmployeeService employeeService;
 
     private final BranchService branchService;
+
+    private final OrganizationDataScopeGuard dataScopeGuard;
 
 
     // =====================================================
@@ -113,7 +116,7 @@ public class EmployeeBranchAssignmentService {
                 );
 
                 assignment.setUpdatedBy(
-                        request.actorUserId()
+                        dataScopeGuard.currentUserId()
                 );
             }
 
@@ -160,11 +163,11 @@ public class EmployeeBranchAssignmentService {
                         )
 
                         .createdBy(
-                                request.actorUserId()
+                                dataScopeGuard.currentUserId()
                         )
 
                         .updatedBy(
-                                request.actorUserId()
+                                dataScopeGuard.currentUserId()
                         )
 
                         .build();
@@ -226,6 +229,8 @@ public class EmployeeBranchAssignmentService {
 
         return assignments
                 .stream()
+                .filter(assignment -> dataScopeGuard.canAccessBranch(
+                        organizationId, assignment.getBranchId()))
                 .map(this::toResponse)
                 .toList();
     }
@@ -257,6 +262,8 @@ public class EmployeeBranchAssignmentService {
                                 )
                         );
 
+        dataScopeGuard.requireBranch(organizationId, assignment.getBranchId());
+
 
         assignment.setStatus(
                 AssignmentStatus.INACTIVE
@@ -276,7 +283,7 @@ public class EmployeeBranchAssignmentService {
 
 
         assignment.setUpdatedBy(
-                actorUserId
+                dataScopeGuard.currentUserId()
         );
 
 

@@ -26,3 +26,15 @@ spring:
 logging:
   level:
     org.hibernate.SQL: DEBUG
+
+security:
+  jwt:
+    issuer: ${JWT_ISSUER:identity-service}
+    secret-base64: ${JWT_SECRET_BASE64:VGhpc0lzTXlTdXBlclNlY3JldEtleUZvckp3dDIwMjQhISE=}
+
+app:
+  security:
+    public-paths:
+      - /health
+      - /actuator/health
+      - /actuator/info

@@ -10,6 +10,7 @@ import com.equipmentrental.organizationcustomer.exception.BadRequestException;
 import com.equipmentrental.organizationcustomer.exception.ConflictException;
 import com.equipmentrental.organizationcustomer.exception.NotFoundException;
 import com.equipmentrental.organizationcustomer.repository.CustomerRepository;
+import com.equipmentrental.organizationcustomer.security.OrganizationDataScopeGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -30,6 +31,8 @@ public class CustomerService {
 
     private final BranchService branchService;
 
+    private final OrganizationDataScopeGuard dataScopeGuard;
+
 
     // =====================================================
     // 1. TẠO KHÁCH HÀNG
@@ -39,6 +42,8 @@ public class CustomerService {
             Long organizationId,
             CustomerRequest request
     ) {
+
+        dataScopeGuard.requireOrganizationOrBranch(organizationId, request.branchId());
 
         // Doanh nghiệp phải tồn tại
         organizationService.getEntity(
@@ -173,13 +178,9 @@ public class CustomerService {
                         clean(request.note())
                 )
 
-                .createdBy(
-                        request.actorUserId()
-                )
+                .createdBy(dataScopeGuard.currentUserId())
 
-                .updatedBy(
-                        request.actorUserId()
-                )
+                .updatedBy(dataScopeGuard.currentUserId())
 
                 .build();
 
@@ -234,6 +235,8 @@ public class CustomerService {
         // Lọc theo branch
         if (branchId != null) {
 
+            dataScopeGuard.requireBranch(organizationId, branchId);
+
             // Branch phải thực sự thuộc organization
             branchService.getEntity(
                     organizationId,
@@ -247,6 +250,9 @@ public class CustomerService {
                                     branchId
                             )
             );
+        } else if (!dataScopeGuard.isAdmin()) {
+            specification = specification.and((root, query, cb) ->
+                    root.get("branchId").in(dataScopeGuard.branchIds()));
         }
 
 
@@ -386,6 +392,8 @@ public class CustomerService {
                         organizationId,
                         customerId
                 );
+
+        dataScopeGuard.requireOrganizationOrBranch(organizationId, request.branchId());
 
 
         validateBranch(
@@ -527,9 +535,7 @@ public class CustomerService {
         );
 
 
-        customer.setUpdatedBy(
-                request.actorUserId()
-        );
+        customer.setUpdatedBy(dataScopeGuard.currentUserId());
 
 
         Customer saved =
@@ -567,9 +573,7 @@ public class CustomerService {
                 LocalDateTime.now()
         );
 
-        customer.setUpdatedBy(
-                actorUserId
-        );
+        customer.setUpdatedBy(dataScopeGuard.currentUserId());
 
 
         customerRepository.save(customer);
@@ -627,7 +631,7 @@ public class CustomerService {
             Long customerId
     ) {
 
-        return customerRepository
+        Customer customer = customerRepository
                 .findByIdAndOrganizationIdAndDeletedAtIsNull(
                         customerId,
                         organizationId
@@ -640,6 +644,8 @@ public class CustomerService {
                                         + organizationId
                         )
                 );
+        dataScopeGuard.requireOrganizationOrBranch(organizationId, customer.getBranchId());
+        return customer;
     }
 
 
@@ -655,6 +661,7 @@ public class CustomerService {
     ) {
 
         if (branchId == null) {
+            dataScopeGuard.requireOrganizationOrBranch(organizationId, null);
             return;
         }
 
@@ -669,6 +676,7 @@ public class CustomerService {
                 organizationId,
                 branchId
         );
+        dataScopeGuard.requireBranch(organizationId, branchId);
     }
 
 

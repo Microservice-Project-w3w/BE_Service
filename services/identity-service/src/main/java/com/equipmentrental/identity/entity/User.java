@@ -29,6 +29,13 @@ public class User {
     @Column(name = "organization_id")
     private Long organizationId;
 
+    /*
+     * Hồ sơ khách hàng tương ứng bên organization-customer-service.
+     * Chỉ dùng cho tài khoản CUSTOMER để các service thực thi data scope OWN.
+     */
+    @Column(name = "customer_id")
+    private Long customerId;
+
     @ElementCollection
     @CollectionTable(name = "user_branch_assignments", joinColumns = @JoinColumn(name = "user_id"))
     @Column(name = "branch_id", nullable = false)
@@ -117,6 +124,10 @@ public class User {
         return organizationId;
     }
 
+    public Long getCustomerId() {
+        return customerId;
+    }
+
     public Set<Long> getBranchIds() {
         return Set.copyOf(branchIds);
     }
@@ -167,6 +178,10 @@ public class User {
 
     public void setOrganizationId(Long organizationId) {
         this.organizationId = organizationId;
+    }
+
+    public void setCustomerId(Long customerId) {
+        this.customerId = customerId;
     }
 
     public void setBranchIds(Set<Long> branchIds) {

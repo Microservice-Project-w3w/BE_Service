@@ -5,7 +5,6 @@ import com.equipmentrental.identity.entity.Permission;
 import com.equipmentrental.identity.entity.Role;
 import com.equipmentrental.identity.entity.RolePermission;
 import com.equipmentrental.identity.repository.PermissionRepository;
-import com.equipmentrental.identity.repository.RolePermissionRepository;
 import com.equipmentrental.identity.repository.RoleRepository;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -31,11 +30,10 @@ public class PermissionDataInitializer {
     @Order(2)
     ApplicationRunner initialPermissionData(
             PermissionRepository permissionRepository,
-            RoleRepository roleRepository,
-            RolePermissionRepository rolePermissionRepository) {
+            RoleRepository roleRepository) {
         return arguments -> {
             Map<String, Permission> permissions = seedPermissions(permissionRepository);
-            seedRolePermissions(roleRepository, permissions, rolePermissionRepository);
+            seedRolePermissions(roleRepository, permissions);
         };
     }
 
@@ -57,8 +55,7 @@ public class PermissionDataInitializer {
 
     private void seedRolePermissions(
             RoleRepository roleRepository,
-            Map<String, Permission> permissions,
-            RolePermissionRepository rolePermissionRepository)
+            Map<String, Permission> permissions)
             throws IOException {
         Map<String, Set<RolePermission>> assignments = new LinkedHashMap<>();
         forEachDataLine(ROLE_PERMISSION_SEED, line -> {
@@ -79,15 +76,8 @@ public class PermissionDataInitializer {
         });
         assignments.forEach((roleCode, rolePermissions) -> {
             Role role = roleRepository.findByCode(roleCode).orElseThrow();
-
-            rolePermissions.forEach(rolePermission -> {
-                boolean exists = rolePermissionRepository.existsByRoleIdAndPermissionId(
-                        role.getId(), rolePermission.getPermission().getId());
-
-                if (!exists) {
-                    rolePermissionRepository.save(rolePermission);
-                }
-            });
+            role.replaceRolePermissions(rolePermissions);
+            roleRepository.save(role);
         });
     }
 

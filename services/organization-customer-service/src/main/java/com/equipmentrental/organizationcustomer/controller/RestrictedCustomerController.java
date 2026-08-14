@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 
@@ -23,6 +24,7 @@ public class RestrictedCustomerController {
 
 
     @PostMapping
+    @PreAuthorize("hasAuthority('customer.restriction.manage') and @organizationScope.canAccessOrganization(#organizationId)")
     @ResponseStatus(HttpStatus.CREATED)
     public RestrictedCustomerResponse create(
             @PathVariable Long organizationId,
@@ -38,6 +40,7 @@ public class RestrictedCustomerController {
 
 
     @GetMapping
+    @PreAuthorize("hasAuthority('customer.restriction.read') and @organizationScope.canAccessOrganization(#organizationId)")
     public List<RestrictedCustomerResponse> getAll(
             @PathVariable Long organizationId,
             @RequestParam(required = false)
@@ -52,6 +55,7 @@ public class RestrictedCustomerController {
 
 
     @GetMapping("/check/{customerId}")
+    @PreAuthorize("hasAuthority('customer.restriction.read') and @organizationScope.canAccessOrganization(#organizationId)")
     public RestrictionCheckResponse check(
             @PathVariable Long organizationId,
             @PathVariable Long customerId
@@ -65,6 +69,7 @@ public class RestrictedCustomerController {
 
 
     @PatchMapping("/{restrictionId}/remove")
+    @PreAuthorize("hasAuthority('customer.restriction.manage') and @organizationScope.canAccessOrganization(#organizationId)")
     public RestrictedCustomerResponse remove(
             @PathVariable Long organizationId,
             @PathVariable Long restrictionId,

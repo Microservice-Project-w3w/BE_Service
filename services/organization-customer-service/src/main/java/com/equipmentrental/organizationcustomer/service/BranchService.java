@@ -7,6 +7,7 @@ import com.equipmentrental.organizationcustomer.enums.BranchStatus;
 import com.equipmentrental.organizationcustomer.exception.ConflictException;
 import com.equipmentrental.organizationcustomer.exception.NotFoundException;
 import com.equipmentrental.organizationcustomer.repository.BranchRepository;
+import com.equipmentrental.organizationcustomer.security.OrganizationDataScopeGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +23,8 @@ public class BranchService {
     private final BranchRepository branchRepository;
 
     private final OrganizationService organizationService;
+
+    private final OrganizationDataScopeGuard dataScopeGuard;
 
 
     // =====================================================
@@ -61,8 +64,8 @@ public class BranchService {
                                 ? BranchStatus.ACTIVE
                                 : request.status()
                 )
-                .createdBy(request.actorUserId())
-                .updatedBy(request.actorUserId())
+                .createdBy(dataScopeGuard.currentUserId())
+                .updatedBy(dataScopeGuard.currentUserId())
                 .build();
 
         Branch saved = branchRepository.save(branch);
@@ -88,6 +91,7 @@ public class BranchService {
                         organizationId
                 )
                 .stream()
+                .filter(branch -> dataScopeGuard.canAccessBranch(organizationId, branch.getId()))
                 .map(this::toResponse)
                 .toList();
     }
@@ -172,9 +176,7 @@ public class BranchService {
             );
         }
 
-        branch.setUpdatedBy(
-                request.actorUserId()
-        );
+        branch.setUpdatedBy(dataScopeGuard.currentUserId());
 
         Branch saved =
                 branchRepository.save(branch);
@@ -210,9 +212,7 @@ public class BranchService {
                 LocalDateTime.now()
         );
 
-        branch.setUpdatedBy(
-                actorUserId
-        );
+        branch.setUpdatedBy(dataScopeGuard.currentUserId());
 
         branchRepository.save(branch);
     }

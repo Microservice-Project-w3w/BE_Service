@@ -10,6 +10,7 @@ import com.equipmentrental.organizationcustomer.exception.BadRequestException;
 import com.equipmentrental.organizationcustomer.exception.ConflictException;
 import com.equipmentrental.organizationcustomer.exception.NotFoundException;
 import com.equipmentrental.organizationcustomer.repository.RestrictedCustomerRepository;
+import com.equipmentrental.organizationcustomer.security.OrganizationDataScopeGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +28,8 @@ public class RestrictedCustomerService {
     private final OrganizationService organizationService;
 
     private final CustomerService customerService;
+
+    private final OrganizationDataScopeGuard dataScopeGuard;
 
 
     // =====================================================
@@ -85,7 +88,7 @@ public class RestrictedCustomerService {
                         .restrictedFrom(restrictedFrom)
                         .restrictedUntil(request.restrictedUntil())
                         .restrictedByUserId(
-                                request.restrictedByUserId()
+                                dataScopeGuard.currentUserId()
                         )
                         .build();
 
@@ -136,6 +139,14 @@ public class RestrictedCustomerService {
 
         return restrictions
                 .stream()
+                .filter(restriction -> {
+                    try {
+                        customerService.getEntity(organizationId, restriction.getCustomerId());
+                        return true;
+                    } catch (org.springframework.security.access.AccessDeniedException denied) {
+                        return false;
+                    }
+                })
                 .map(this::toResponse)
                 .toList();
     }
@@ -240,7 +251,7 @@ public class RestrictedCustomerService {
         );
 
         restriction.setRemovedByUserId(
-                request.removedByUserId()
+                dataScopeGuard.currentUserId()
         );
 
         restriction.setRemovedReason(

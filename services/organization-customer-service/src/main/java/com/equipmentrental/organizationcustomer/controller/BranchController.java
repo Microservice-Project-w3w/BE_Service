@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 
@@ -24,6 +25,7 @@ public class BranchController {
     // =====================================================
 
     @PostMapping
+    @PreAuthorize("hasAuthority('organization.branch.create') and @organizationScope.canAccessOrganization(#organizationId)")
     @ResponseStatus(HttpStatus.CREATED)
     public BranchResponse create(
             @PathVariable Long organizationId,
@@ -42,6 +44,7 @@ public class BranchController {
     // =====================================================
 
     @GetMapping
+    @PreAuthorize("hasAuthority('organization.branch.read') and @organizationScope.canAccessOrganization(#organizationId)")
     public List<BranchResponse> getAll(
             @PathVariable Long organizationId
     ) {
@@ -57,6 +60,7 @@ public class BranchController {
     // =====================================================
 
     @GetMapping("/{branchId}")
+    @PreAuthorize("hasAuthority('organization.branch.read') and @organizationScope.canAccessBranch(#organizationId, #branchId)")
     public BranchResponse getById(
             @PathVariable Long organizationId,
             @PathVariable Long branchId
@@ -74,6 +78,7 @@ public class BranchController {
     // =====================================================
 
     @PutMapping("/{branchId}")
+    @PreAuthorize("hasAuthority('organization.branch.update') and @organizationScope.canAccessBranch(#organizationId, #branchId)")
     public BranchResponse update(
             @PathVariable Long organizationId,
             @PathVariable Long branchId,
@@ -92,6 +97,7 @@ public class BranchController {
     // =====================================================
 
     @DeleteMapping("/{branchId}")
+    @PreAuthorize("hasAuthority('organization.branch.lock') and @organizationScope.canAccessBranch(#organizationId, #branchId)")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(
             @PathVariable Long organizationId,

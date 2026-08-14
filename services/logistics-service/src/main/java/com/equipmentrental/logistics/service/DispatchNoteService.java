@@ -10,6 +10,9 @@ import com.equipmentrental.logistics.entity.enums.DispatchStatus;
 import com.equipmentrental.logistics.exception.ResourceNotFoundException;
 import com.equipmentrental.logistics.repository.DispatchNoteItemRepository;
 import com.equipmentrental.logistics.repository.DispatchNoteRepository;
+import com.equipmentrental.logistics.repository.DeliveryTaskRepository;
+import com.equipmentrental.logistics.entity.DeliveryTask;
+import com.equipmentrental.logistics.security.LogisticsDataScopeGuard;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
@@ -20,17 +23,34 @@ public class DispatchNoteService {
 
     private final DispatchNoteRepository repository;
     private final DispatchNoteItemRepository itemRepository;
+    private final DeliveryTaskRepository taskRepository;
+    private final LogisticsDataScopeGuard dataScopeGuard;
 
-    public DispatchNoteService(DispatchNoteRepository repository, DispatchNoteItemRepository itemRepository) {
+    public DispatchNoteService(
+            DispatchNoteRepository repository,
+            DispatchNoteItemRepository itemRepository,
+            DeliveryTaskRepository taskRepository,
+            LogisticsDataScopeGuard dataScopeGuard) {
         this.repository = repository;
         this.itemRepository = itemRepository;
+        this.taskRepository = taskRepository;
+        this.dataScopeGuard = dataScopeGuard;
     }
 
     @Transactional
     public DispatchNoteResponse createDispatchNote(CreateDispatchNoteRequest request) {
 
+        DeliveryTask task = taskRepository.findById(request.getDeliveryTaskId())
+                .orElseThrow(() -> new ResourceNotFoundException("Delivery task not found"));
+        dataScopeGuard.requireBranch(task.getOrganizationId(), task.getBranchId());
+        if (!task.getRentalOrderId().equals(request.getRentalOrderId())) {
+            throw new IllegalArgumentException("Delivery task không thuộc đơn thuê đã chọn");
+        }
+
         DispatchNote note = new DispatchNote();
 
+        note.setOrganizationId(task.getOrganizationId());
+        note.setBranchId(task.getBranchId());
         note.setDispatchCode(request.getDispatchCode());
         note.setRentalOrderId(request.getRentalOrderId());
         note.setCustomerId(request.getCustomerId());
@@ -55,8 +75,7 @@ public class DispatchNoteService {
     @Transactional(readOnly = true)
     public DispatchNoteResponse getDispatchNote(Long id) {
 
-        DispatchNote note =
-                repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Dispatch Note not found"));
+        DispatchNote note = findNote(id);
 
         return mapToResponse(note);
     }
@@ -93,6 +112,7 @@ public class DispatchNoteService {
     public List<DispatchNoteResponse> getAllDispatchNotes() {
         return repository.findAll()
                 .stream()
+                .filter(note -> dataScopeGuard.canAccessBranch(note.getOrganizationId(), note.getBranchId()))
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -102,15 +122,17 @@ public class DispatchNoteService {
             UpdateDispatchNoteStatusRequest request
     ) {
 
-        DispatchNote note = repository.findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Dispatch note not found: " + id
-                        )
-                );
+        DispatchNote note = findNote(id);
 
         note.setStatus(request.getStatus());
 
         return mapToResponse(repository.save(note));
+    }
+
+    private DispatchNote findNote(Long id) {
+        DispatchNote note = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Dispatch note not found: " + id));
+        dataScopeGuard.requireBranch(note.getOrganizationId(), note.getBranchId());
+        return note;
     }
 }

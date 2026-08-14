@@ -12,6 +12,12 @@ public class DispatchNote {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "organization_id")
+    private Long organizationId;
+
+    @Column(name = "branch_id")
+    private Long branchId;
+
     @Column(name = "dispatch_code", nullable = false, unique = true, length = 50)
     private String dispatchCode;
 
@@ -54,6 +60,22 @@ public class DispatchNote {
 
     public Long getId() {
         return id;
+    }
+
+    public Long getOrganizationId() {
+        return organizationId;
+    }
+
+    public void setOrganizationId(Long organizationId) {
+        this.organizationId = organizationId;
+    }
+
+    public Long getBranchId() {
+        return branchId;
+    }
+
+    public void setBranchId(Long branchId) {
+        this.branchId = branchId;
     }
 
     public String getDispatchCode() {

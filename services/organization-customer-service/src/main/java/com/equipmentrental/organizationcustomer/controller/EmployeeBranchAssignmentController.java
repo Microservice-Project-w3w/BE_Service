@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 
@@ -25,6 +26,7 @@ public class EmployeeBranchAssignmentController {
     // =====================================================
 
     @PostMapping
+    @PreAuthorize("hasAuthority('organization.employee.assign-branch') and @organizationScope.canAccessBranch(#organizationId, #request.branchId())")
     @ResponseStatus(HttpStatus.CREATED)
     public EmployeeBranchAssignmentResponse create(
 
@@ -52,6 +54,7 @@ public class EmployeeBranchAssignmentController {
     // =====================================================
 
     @GetMapping
+    @PreAuthorize("hasAuthority('organization.employee.read') and @organizationScope.canAccessOrganization(#organizationId)")
     public List<EmployeeBranchAssignmentResponse> getAll(
 
             @PathVariable Long organizationId,
@@ -72,6 +75,7 @@ public class EmployeeBranchAssignmentController {
     // =====================================================
 
     @PatchMapping("/{assignmentId}/deactivate")
+    @PreAuthorize("hasAuthority('organization.employee.assign-branch') and @organizationScope.canAccessOrganization(#organizationId)")
     public EmployeeBranchAssignmentResponse deactivate(
 
             @PathVariable Long organizationId,

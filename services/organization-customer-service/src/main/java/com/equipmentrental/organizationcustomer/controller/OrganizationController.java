@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 
@@ -24,6 +25,7 @@ public class OrganizationController {
     // =====================================================
 
     @PostMapping
+    @PreAuthorize("hasAuthority('organization.profile.update')")
     @ResponseStatus(HttpStatus.CREATED)
     public OrganizationResponse create(
             @Valid @RequestBody OrganizationRequest request
@@ -38,6 +40,7 @@ public class OrganizationController {
     // =====================================================
 
     @GetMapping
+    @PreAuthorize("hasAuthority('organization.profile.read')")
     public List<OrganizationResponse> getAll() {
         return service.getAll();
     }
@@ -49,6 +52,7 @@ public class OrganizationController {
     // =====================================================
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('organization.profile.read') and @organizationScope.canAccessOrganization(#id)")
     public OrganizationResponse getById(
             @PathVariable Long id
     ) {
@@ -62,6 +66,7 @@ public class OrganizationController {
     // =====================================================
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('organization.profile.update') and @organizationScope.canAccessOrganization(#id)")
     public OrganizationResponse update(
             @PathVariable Long id,
             @Valid @RequestBody OrganizationRequest request
@@ -76,6 +81,7 @@ public class OrganizationController {
     // =====================================================
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('organization.profile.update') and @organizationScope.canAccessOrganization(#id)")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(
             @PathVariable Long id,

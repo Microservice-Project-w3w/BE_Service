@@ -7,6 +7,12 @@ import lombok.Data;
 @Data
 public class CreateReturnRequestRequest {
     @NotNull
+    private Long organizationId;
+
+    @NotNull
+    private Long branchId;
+
+    @NotNull
     private Long rentalOrderId;
 
     @NotNull

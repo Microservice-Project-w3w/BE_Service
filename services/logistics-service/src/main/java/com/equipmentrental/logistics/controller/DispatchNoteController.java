@@ -7,6 +7,7 @@ import com.equipmentrental.logistics.dto.request.UpdateDispatchNoteStatusRequest
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 import java.util.List;
 
 @RestController
@@ -19,22 +20,26 @@ public class DispatchNoteController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('logistics.delivery.inspect')")
     @ResponseStatus(HttpStatus.CREATED)
     public DispatchNoteResponse createDispatchNote(@Valid @RequestBody CreateDispatchNoteRequest request) {
         return service.createDispatchNote(request);
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('logistics.delivery.read')")
     public DispatchNoteResponse getDispatchNote(@PathVariable Long id) {
         return service.getDispatchNote(id);
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('logistics.delivery.read')")
     public List<DispatchNoteResponse> getAllDispatchNotes() {
         return service.getAllDispatchNotes();
     }
 
     @PatchMapping("/{id}/status")
+    @PreAuthorize("hasAuthority('logistics.delivery.confirm')")
     public DispatchNoteResponse updateStatus(
             @PathVariable Long id,
             @Valid @RequestBody UpdateDispatchNoteStatusRequest request

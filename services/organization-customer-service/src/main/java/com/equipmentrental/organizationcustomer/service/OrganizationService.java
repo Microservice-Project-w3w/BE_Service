@@ -7,6 +7,7 @@ import com.equipmentrental.organizationcustomer.enums.OrganizationStatus;
 import com.equipmentrental.organizationcustomer.exception.ConflictException;
 import com.equipmentrental.organizationcustomer.exception.NotFoundException;
 import com.equipmentrental.organizationcustomer.repository.OrganizationRepository;
+import com.equipmentrental.organizationcustomer.security.OrganizationDataScopeGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +21,8 @@ import java.util.List;
 public class OrganizationService {
 
     private final OrganizationRepository repository;
+
+    private final OrganizationDataScopeGuard dataScopeGuard;
 
 
     // =====================================================
@@ -72,12 +75,8 @@ public class OrganizationService {
                                 ? OrganizationStatus.ACTIVE
                                 : request.status()
                 )
-                .createdBy(
-                        request.actorUserId()
-                )
-                .updatedBy(
-                        request.actorUserId()
-                )
+                .createdBy(dataScopeGuard.currentUserId())
+                .updatedBy(dataScopeGuard.currentUserId())
                 .build();
 
         Organization saved =
@@ -195,9 +194,7 @@ public class OrganizationService {
         }
 
 
-        organization.setUpdatedBy(
-                request.actorUserId()
-        );
+        organization.setUpdatedBy(dataScopeGuard.currentUserId());
 
 
         Organization saved =
@@ -228,9 +225,7 @@ public class OrganizationService {
                 LocalDateTime.now()
         );
 
-        organization.setUpdatedBy(
-                actorUserId
-        );
+        organization.setUpdatedBy(dataScopeGuard.currentUserId());
 
         repository.save(organization);
     }

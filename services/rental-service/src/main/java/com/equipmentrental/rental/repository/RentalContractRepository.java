@@ -7,5 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface RentalContractRepository extends JpaRepository<RentalContract, Long> {
     List<RentalContract> findByOrganizationIdAndBranchId(Long organizationId, Long branchId);
 
+    List<RentalContract> findByOrganizationIdAndBranchIdAndCustomerId(
+            Long organizationId, Long branchId, Long customerId);
+
     boolean existsByRentalOrderId(Long rentalOrderId);
 }

@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @RestController
 @RequestMapping("/api/v1/logistics/returns")
@@ -22,49 +23,58 @@ public class ReturnController {
     }
 
     @PostMapping("/requests")
+    @PreAuthorize("hasAuthority('logistics.return-request.create')")
     @ResponseStatus(HttpStatus.CREATED)
     public ReturnRequestResponse createReturnRequest(@Valid @RequestBody CreateReturnRequestRequest request) {
         return service.createReturnRequest(request);
     }
 
     @PostMapping("/records")
+    @PreAuthorize("hasAuthority('logistics.return.inspect')")
     @ResponseStatus(HttpStatus.CREATED)
     public ReturnRecordResponse createReturnRecord(@Valid @RequestBody CreateReturnRecordRequest request) {
         return service.createReturnRecord(request);
     }
 
     @GetMapping("/records/{id}")
+    @PreAuthorize("hasAnyAuthority('logistics.return-request.read','logistics.return.inspect')")
     public ReturnRecordResponse getReturnRecord(@PathVariable Long id) {
         return service.getReturnRecord(id);
     }
 
     @PostMapping("/inspections")
+    @PreAuthorize("hasAuthority('logistics.return.inspect')")
     @ResponseStatus(HttpStatus.CREATED)
     public ReturnInspectionResponse createInspection(@Valid @RequestBody CreateReturnInspectionRequest request) {
         return service.createInspection(request);
     }
 
     @GetMapping("/requests")
+    @PreAuthorize("hasAuthority('logistics.return-request.read')")
     public List<ReturnRequestResponse> getReturnRequests() {
         return service.getReturnRequests();
     }
 
     @GetMapping("/requests/{id}")
+    @PreAuthorize("hasAuthority('logistics.return-request.read')")
     public ReturnRequestResponse getReturnRequest(@PathVariable Long id) {
         return service.getReturnRequest(id);
     }
 
     @GetMapping("/inspections")
+    @PreAuthorize("hasAnyAuthority('logistics.return-request.read','logistics.return.inspect')")
     public List<ReturnInspectionResponse> getInspections() {
         return service.getInspections();
     }
 
     @GetMapping("/inspections/{id}")
+    @PreAuthorize("hasAnyAuthority('logistics.return-request.read','logistics.return.inspect')")
     public ReturnInspectionResponse getInspection(@PathVariable Long id) {
         return service.getInspection(id);
     }
 
     @GetMapping("/records")
+    @PreAuthorize("hasAnyAuthority('logistics.return-request.read','logistics.return.inspect')")
     public List<ReturnRecordResponse> getReturnRecords() {
         return service.getReturnRecords();
     }

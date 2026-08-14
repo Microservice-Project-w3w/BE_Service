@@ -8,6 +8,7 @@ import com.equipmentrental.logistics.dto.request.UpdateDeliveryTaskRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 
@@ -22,6 +23,7 @@ public class DeliveryTaskController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('logistics.delivery.create')")
     @ResponseStatus(HttpStatus.CREATED)
     public DeliveryTaskResponse createTask(
             @Valid @RequestBody CreateDeliveryTaskRequest request
@@ -30,23 +32,19 @@ public class DeliveryTaskController {
     }
 
     @PutMapping("/{id}/status")
+    @PreAuthorize("hasAuthority('logistics.delivery.confirm')")
     public DeliveryTaskResponse updateTaskStatus(
             @PathVariable Long id,
-            @Valid @RequestBody UpdateTaskStatusRequest request,
-            @RequestHeader(
-                    value = "X-User-Id",
-                    required = false,
-                    defaultValue = "1"
-            ) Long currentUserId
+            @Valid @RequestBody UpdateTaskStatusRequest request
     ) {
         return service.updateTaskStatus(
                 id,
-                request,
-                currentUserId
+                request
         );
     }
 
     @GetMapping("/staff/{staffUserId}")
+    @PreAuthorize("hasAuthority('logistics.delivery.read')")
     public List<DeliveryTaskResponse> getTasksByStaff(
             @PathVariable Long staffUserId
     ) {
@@ -54,6 +52,7 @@ public class DeliveryTaskController {
     }
 
     @GetMapping("/schedule")
+    @PreAuthorize("hasAuthority('logistics.delivery.read')")
     public List<DeliveryTaskResponse> getTasksByDate(
             @RequestParam String date
     ) {
@@ -62,12 +61,14 @@ public class DeliveryTaskController {
 
     // LẤY TOÀN BỘ TASK
     @GetMapping
+    @PreAuthorize("hasAuthority('logistics.delivery.read')")
     public List<DeliveryTaskResponse> getAllTasks() {
         return service.getAllTasks();
     }
 
     // LẤY CHI TIẾT TASK
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('logistics.delivery.read')")
     public DeliveryTaskResponse getTaskById(
             @PathVariable Long id
     ) {
@@ -75,6 +76,7 @@ public class DeliveryTaskController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('logistics.delivery.assign','logistics.delivery.schedule')")
     public DeliveryTaskResponse updateTask(
             @PathVariable Long id,
             @RequestBody UpdateDeliveryTaskRequest request

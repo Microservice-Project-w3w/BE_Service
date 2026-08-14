@@ -7,6 +7,9 @@ import com.equipmentrental.organizationcustomer.enums.EmployeeStatus;
 import com.equipmentrental.organizationcustomer.exception.ConflictException;
 import com.equipmentrental.organizationcustomer.exception.NotFoundException;
 import com.equipmentrental.organizationcustomer.repository.EmployeeRepository;
+import com.equipmentrental.organizationcustomer.repository.EmployeeBranchAssignmentRepository;
+import com.equipmentrental.organizationcustomer.enums.AssignmentStatus;
+import com.equipmentrental.organizationcustomer.security.OrganizationDataScopeGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +25,10 @@ public class EmployeeService {
     private final EmployeeRepository employeeRepository;
 
     private final OrganizationService organizationService;
+
+    private final EmployeeBranchAssignmentRepository assignmentRepository;
+
+    private final OrganizationDataScopeGuard dataScopeGuard;
 
 
     // =====================================================
@@ -83,8 +90,8 @@ public class EmployeeService {
                                 : request.status()
                 )
                 .hireDate(request.hireDate())
-                .createdBy(request.actorUserId())
-                .updatedBy(request.actorUserId())
+                .createdBy(dataScopeGuard.currentUserId())
+                .updatedBy(dataScopeGuard.currentUserId())
                 .build();
 
 
@@ -113,6 +120,7 @@ public class EmployeeService {
                         organizationId
                 )
                 .stream()
+                .filter(this::canAccessEmployee)
                 .map(this::toResponse)
                 .toList();
     }
@@ -224,9 +232,7 @@ public class EmployeeService {
         }
 
 
-        employee.setUpdatedBy(
-                request.actorUserId()
-        );
+        employee.setUpdatedBy(dataScopeGuard.currentUserId());
 
 
         Employee saved =
@@ -261,9 +267,7 @@ public class EmployeeService {
                 LocalDateTime.now()
         );
 
-        employee.setUpdatedBy(
-                actorUserId
-        );
+        employee.setUpdatedBy(dataScopeGuard.currentUserId());
 
 
         employeeRepository.save(employee);
@@ -279,7 +283,7 @@ public class EmployeeService {
             Long employeeId
     ) {
 
-        return employeeRepository
+        Employee employee = employeeRepository
                 .findByIdAndOrganizationIdAndDeletedAtIsNull(
                         employeeId,
                         organizationId
@@ -290,6 +294,22 @@ public class EmployeeService {
                                         + employeeId
                         )
                 );
+        if (!canAccessEmployee(employee)) {
+            dataScopeGuard.requireBranch(organizationId, null);
+        }
+        return employee;
+    }
+
+    private boolean canAccessEmployee(Employee employee) {
+        if (dataScopeGuard.isAdmin()) {
+            return true;
+        }
+        return assignmentRepository
+                .findAllByOrganizationIdAndEmployeeIdAndStatus(
+                        employee.getOrganizationId(), employee.getId(), AssignmentStatus.ACTIVE)
+                .stream()
+                .anyMatch(assignment -> dataScopeGuard.canAccessBranch(
+                        employee.getOrganizationId(), assignment.getBranchId()));
     }
 
 

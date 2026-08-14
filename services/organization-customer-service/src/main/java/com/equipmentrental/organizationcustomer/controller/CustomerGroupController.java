@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 
@@ -22,6 +23,7 @@ public class CustomerGroupController {
 
 
     @PostMapping
+    @PreAuthorize("hasAuthority('customer.group.manage') and @organizationScope.canAccessOrganization(#organizationId)")
     @ResponseStatus(HttpStatus.CREATED)
     public CustomerGroupResponse create(
             @PathVariable Long organizationId,
@@ -36,6 +38,7 @@ public class CustomerGroupController {
 
 
     @GetMapping
+    @PreAuthorize("hasAuthority('customer.group.read') and @organizationScope.canAccessOrganization(#organizationId)")
     public List<CustomerGroupResponse> getAll(
             @PathVariable Long organizationId
     ) {
@@ -47,6 +50,7 @@ public class CustomerGroupController {
 
 
     @GetMapping("/{groupId}")
+    @PreAuthorize("hasAuthority('customer.group.read') and @organizationScope.canAccessOrganization(#organizationId)")
     public CustomerGroupResponse getById(
             @PathVariable Long organizationId,
             @PathVariable Long groupId
@@ -60,6 +64,7 @@ public class CustomerGroupController {
 
 
     @PutMapping("/{groupId}")
+    @PreAuthorize("hasAuthority('customer.group.manage') and @organizationScope.canAccessOrganization(#organizationId)")
     public CustomerGroupResponse update(
             @PathVariable Long organizationId,
             @PathVariable Long groupId,
@@ -75,6 +80,7 @@ public class CustomerGroupController {
 
 
     @DeleteMapping("/{groupId}")
+    @PreAuthorize("hasAuthority('customer.group.manage') and @organizationScope.canAccessOrganization(#organizationId)")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(
             @PathVariable Long organizationId,
@@ -96,6 +102,7 @@ public class CustomerGroupController {
     // =====================================================
 
     @PostMapping("/{groupId}/members/{customerId}")
+    @PreAuthorize("hasAuthority('customer.group.manage') and @organizationScope.canAccessOrganization(#organizationId)")
     @ResponseStatus(HttpStatus.CREATED)
     public CustomerGroupMemberResponse addMember(
             @PathVariable Long organizationId,
@@ -115,6 +122,7 @@ public class CustomerGroupController {
 
 
     @GetMapping("/{groupId}/members")
+    @PreAuthorize("hasAuthority('customer.group.read') and @organizationScope.canAccessOrganization(#organizationId)")
     public List<CustomerGroupMemberResponse> getMembers(
             @PathVariable Long organizationId,
             @PathVariable Long groupId
@@ -128,6 +136,7 @@ public class CustomerGroupController {
 
 
     @DeleteMapping("/{groupId}/members/{customerId}")
+    @PreAuthorize("hasAuthority('customer.group.manage') and @organizationScope.canAccessOrganization(#organizationId)")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void removeMember(
             @PathVariable Long organizationId,

@@ -11,4 +11,5 @@ public record UserResponse(
         UserStatus status,
         boolean emailVerified,
         Long organizationId,
-        Set<Long> branchIds) {}
+        Set<Long> branchIds,
+        Long customerId) {}

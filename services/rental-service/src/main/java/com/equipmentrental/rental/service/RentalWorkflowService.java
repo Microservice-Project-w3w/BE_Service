@@ -49,7 +49,7 @@ public class RentalWorkflowService {
 
     public RentalRequestResponse createRequest(RentalRequestCreate r) {
         if (!r.endAt().isAfter(r.startAt())) throw new ApiException("Thời gian trả phải sau thời gian nhận");
-        dataScopeGuard.requireBranch(r.organizationId(), r.branchId());
+        dataScopeGuard.requireRentalAccess(r.organizationId(), r.branchId(), r.customerId());
         RentalRequest e = new RentalRequest();
         e.setRequestCode("REQ-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         e.setOrganizationId(r.organizationId());
@@ -70,8 +70,11 @@ public class RentalWorkflowService {
 
     @Transactional(readOnly = true)
     public List<RentalRequestResponse> getRequests(Long organizationId, Long branchId) {
-        dataScopeGuard.requireBranch(organizationId, branchId);
-        return requests.findByOrganizationIdAndBranchId(organizationId, branchId).stream()
+        Long customerId = dataScopeGuard.customerIdForOwnList(organizationId, branchId);
+        List<RentalRequest> values = customerId == null
+                ? requests.findByOrganizationIdAndBranchId(organizationId, branchId)
+                : requests.findByOrganizationIdAndBranchIdAndCustomerId(organizationId, branchId, customerId);
+        return values.stream()
                 .map(RentalResponseMapper::request)
                 .toList();
     }
@@ -153,8 +156,11 @@ public class RentalWorkflowService {
 
     @Transactional(readOnly = true)
     public List<QuotationResponse> getQuotations(Long organizationId, Long branchId) {
-        dataScopeGuard.requireBranch(organizationId, branchId);
-        return quotations.findByOrganizationIdAndBranchId(organizationId, branchId).stream()
+        Long customerId = dataScopeGuard.customerIdForOwnList(organizationId, branchId);
+        List<Quotation> values = customerId == null
+                ? quotations.findByOrganizationIdAndBranchId(organizationId, branchId)
+                : quotations.findByOrganizationIdAndBranchIdAndCustomerId(organizationId, branchId, customerId);
+        return values.stream()
                 .map(RentalResponseMapper::quotation)
                 .toList();
     }
@@ -176,8 +182,8 @@ public class RentalWorkflowService {
 
     public QuotationResponse acceptQuotation(Long id) {
         Quotation q = findQuotation(id);
-        if (q.getStatus() != QuotationStatus.SENT && q.getStatus() != QuotationStatus.APPROVED)
-            throw ApiException.invalidStatus("Báo giá chưa sẵn sàng để chấp nhận");
+        if (q.getStatus() != QuotationStatus.APPROVED)
+            throw ApiException.invalidStatus("Chỉ chấp nhận được báo giá đã được quản lý phê duyệt");
         q.setStatus(QuotationStatus.ACCEPTED);
         return RentalResponseMapper.quotation(quotations.save(q));
     }
@@ -262,8 +268,11 @@ public class RentalWorkflowService {
 
     @Transactional(readOnly = true)
     public List<RentalOrderResponse> getOrders(Long organizationId, Long branchId) {
-        dataScopeGuard.requireBranch(organizationId, branchId);
-        return orders.findByOrganizationIdAndBranchId(organizationId, branchId).stream()
+        Long customerId = dataScopeGuard.customerIdForOwnList(organizationId, branchId);
+        List<RentalOrder> values = customerId == null
+                ? orders.findByOrganizationIdAndBranchId(organizationId, branchId)
+                : orders.findByOrganizationIdAndBranchIdAndCustomerId(organizationId, branchId, customerId);
+        return values.stream()
                 .map(RentalResponseMapper::order)
                 .toList();
     }
@@ -271,20 +280,22 @@ public class RentalWorkflowService {
     private RentalRequest findRequest(Long id) {
         RentalRequest request =
                 requests.findById(id).orElseThrow(() -> ApiException.notFound("Không tìm thấy yêu cầu thuê"));
-        dataScopeGuard.requireBranch(request.getOrganizationId(), request.getBranchId());
+        dataScopeGuard.requireRentalAccess(
+                request.getOrganizationId(), request.getBranchId(), request.getCustomerId());
         return request;
     }
 
     private Quotation findQuotation(Long id) {
         Quotation quotation =
                 quotations.findById(id).orElseThrow(() -> ApiException.notFound("Không tìm thấy báo giá"));
-        dataScopeGuard.requireBranch(quotation.getOrganizationId(), quotation.getBranchId());
+        dataScopeGuard.requireRentalAccess(
+                quotation.getOrganizationId(), quotation.getBranchId(), quotation.getCustomerId());
         return quotation;
     }
 
     private RentalOrder findOrder(Long id) {
         RentalOrder order = orders.findById(id).orElseThrow(() -> ApiException.notFound("Không tìm thấy đơn thuê"));
-        dataScopeGuard.requireBranch(order.getOrganizationId(), order.getBranchId());
+        dataScopeGuard.requireRentalAccess(order.getOrganizationId(), order.getBranchId(), order.getCustomerId());
         return order;
     }
 }

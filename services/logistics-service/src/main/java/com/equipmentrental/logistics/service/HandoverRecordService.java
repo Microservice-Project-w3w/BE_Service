@@ -13,6 +13,9 @@ import com.equipmentrental.logistics.exception.ResourceNotFoundException;
 import com.equipmentrental.logistics.repository.HandoverChecklistRepository;
 import com.equipmentrental.logistics.repository.HandoverPhotoRepository;
 import com.equipmentrental.logistics.repository.HandoverRecordRepository;
+import com.equipmentrental.logistics.repository.DispatchNoteRepository;
+import com.equipmentrental.logistics.entity.DispatchNote;
+import com.equipmentrental.logistics.security.LogisticsDataScopeGuard;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
@@ -24,18 +27,27 @@ public class HandoverRecordService {
     private final HandoverRecordRepository repository;
     private final HandoverChecklistRepository checklistRepository;
     private final HandoverPhotoRepository photoRepository;
+    private final DispatchNoteRepository dispatchNoteRepository;
+    private final LogisticsDataScopeGuard dataScopeGuard;
 
     public HandoverRecordService(
             HandoverRecordRepository repository,
             HandoverChecklistRepository checklistRepository,
-            HandoverPhotoRepository photoRepository) {
+            HandoverPhotoRepository photoRepository,
+            DispatchNoteRepository dispatchNoteRepository,
+            LogisticsDataScopeGuard dataScopeGuard) {
         this.repository = repository;
         this.checklistRepository = checklistRepository;
         this.photoRepository = photoRepository;
+        this.dispatchNoteRepository = dispatchNoteRepository;
+        this.dataScopeGuard = dataScopeGuard;
     }
 
     @Transactional
     public HandoverRecordResponse createHandoverRecord(CreateHandoverRecordRequest request) {
+
+        DispatchNote dispatchNote = findDispatchNote(request.getDispatchNoteId());
+        dataScopeGuard.requireBranch(dispatchNote.getOrganizationId(), dispatchNote.getBranchId());
 
         HandoverRecord record = new HandoverRecord();
 
@@ -95,9 +107,7 @@ public class HandoverRecordService {
     @Transactional
     public HandoverPhotoResponse addPhoto(Long handoverRecordId, HandoverPhotoRequest request) {
 
-        repository
-                .findById(handoverRecordId)
-                .orElseThrow(() -> new ResourceNotFoundException("Handover Record not found"));
+        findRecord(handoverRecordId);
 
         HandoverPhoto photo = new HandoverPhoto();
 
@@ -125,8 +135,7 @@ public class HandoverRecordService {
     @Transactional(readOnly = true)
     public HandoverRecordResponse getHandoverRecord(Long id) {
 
-        HandoverRecord record =
-                repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Handover Record not found"));
+        HandoverRecord record = findRecord(id);
 
         return mapToResponse(record);
     }
@@ -189,8 +198,7 @@ public class HandoverRecordService {
     @Transactional
     public HandoverRecordResponse confirmHandoverRecord(Long id) {
 
-        HandoverRecord record =
-                repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Handover Record not found"));
+        HandoverRecord record = findRecord(id);
 
         if (record.getStatus() == HandoverStatus.CONFIRMED) {
             return mapToResponse(record);
@@ -210,9 +218,7 @@ public class HandoverRecordService {
     @Transactional(readOnly = true)
     public List<HandoverPhotoResponse> getPhotos(Long handoverRecordId) {
 
-        if (!repository.existsById(handoverRecordId)) {
-            throw new ResourceNotFoundException("Handover Record not found");
-        }
+        findRecord(handoverRecordId);
 
         return photoRepository.findByHandoverRecordId(handoverRecordId).stream()
                 .map(p -> {
@@ -232,17 +238,16 @@ public class HandoverRecordService {
     @Transactional(readOnly = true)
     public List<HandoverRecordResponse> getHandoverRecords() {
 
-        return repository.findAll().stream().map(this::mapToResponse).collect(Collectors.toList());
+        return repository.findAll().stream()
+                .filter(this::canAccess)
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public List<HandoverChecklistResponse> getChecklists(Long handoverRecordId) {
 
-        if (!repository.existsById(handoverRecordId)) {
-            throw new ResourceNotFoundException(
-                    "Handover Record not found: " + handoverRecordId
-            );
-        }
+        findRecord(handoverRecordId);
 
         return checklistRepository.findByHandoverRecordId(handoverRecordId)
                 .stream()
@@ -260,5 +265,23 @@ public class HandoverRecordService {
                     return res;
                 })
                 .collect(Collectors.toList());
+    }
+
+    private HandoverRecord findRecord(Long id) {
+        HandoverRecord record = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Handover Record not found: " + id));
+        DispatchNote note = findDispatchNote(record.getDispatchNoteId());
+        dataScopeGuard.requireBranch(note.getOrganizationId(), note.getBranchId());
+        return record;
+    }
+
+    private boolean canAccess(HandoverRecord record) {
+        DispatchNote note = dispatchNoteRepository.findById(record.getDispatchNoteId()).orElse(null);
+        return note != null && dataScopeGuard.canAccessBranch(note.getOrganizationId(), note.getBranchId());
+    }
+
+    private DispatchNote findDispatchNote(Long id) {
+        return dispatchNoteRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Dispatch note not found: " + id));
     }
 }

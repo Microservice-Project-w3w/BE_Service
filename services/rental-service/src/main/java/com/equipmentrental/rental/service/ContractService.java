@@ -41,7 +41,7 @@ public class ContractService {
         if (contracts.existsByRentalOrderId(request.rentalOrderId())) throw new ApiException("Đơn thuê đã có hợp đồng");
         RentalOrder order = orders.findById(request.rentalOrderId())
                 .orElseThrow(() -> ApiException.notFound("Không tìm thấy đơn thuê"));
-        dataScopeGuard.requireBranch(order.getOrganizationId(), order.getBranchId());
+        dataScopeGuard.requireRentalAccess(order.getOrganizationId(), order.getBranchId(), order.getCustomerId());
         if (order.getStatus() != OrderStatus.CONFIRMED)
             throw ApiException.invalidStatus("Chỉ tạo hợp đồng cho đơn đã xác nhận");
         RentalContract contract = new RentalContract();
@@ -60,8 +60,11 @@ public class ContractService {
 
     @Transactional(readOnly = true)
     public List<RentalContractResponse> list(Long organizationId, Long branchId) {
-        dataScopeGuard.requireBranch(organizationId, branchId);
-        return contracts.findByOrganizationIdAndBranchId(organizationId, branchId).stream()
+        Long customerId = dataScopeGuard.customerIdForOwnList(organizationId, branchId);
+        List<RentalContract> values = customerId == null
+                ? contracts.findByOrganizationIdAndBranchId(organizationId, branchId)
+                : contracts.findByOrganizationIdAndBranchIdAndCustomerId(organizationId, branchId, customerId);
+        return values.stream()
                 .map(RentalResponseMapper::contract)
                 .toList();
     }
@@ -164,14 +167,18 @@ public class ContractService {
     private RentalContract contract(Long id) {
         RentalContract value =
                 contracts.findById(id).orElseThrow(() -> ApiException.notFound("Không tìm thấy hợp đồng"));
-        dataScopeGuard.requireBranch(value.getOrganizationId(), value.getBranchId());
+        dataScopeGuard.requireRentalAccess(value.getOrganizationId(), value.getBranchId(), value.getCustomerId());
         return value;
     }
 
     private ContractAppendix appendix(Long id) {
         ContractAppendix value =
                 appendices.findById(id).orElseThrow(() -> ApiException.notFound("Không tìm thấy phụ lục"));
-        dataScopeGuard.requireBranch(value.getOrganizationId(), value.getBranchId());
+        RentalContract contract = contracts
+                .findById(value.getContractId())
+                .orElseThrow(() -> ApiException.notFound("Không tìm thấy hợp đồng"));
+        dataScopeGuard.requireRentalAccess(
+                contract.getOrganizationId(), contract.getBranchId(), contract.getCustomerId());
         return value;
     }
 

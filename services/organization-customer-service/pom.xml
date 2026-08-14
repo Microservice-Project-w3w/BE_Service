@@ -57,6 +57,12 @@
 
     <dependencies>
 
+        <dependency>
+            <groupId>com.equipmentrental</groupId>
+            <artifactId>common-security</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
 
         <!-- ============================== -->
         <!-- REST API / SPRING MVC          -->
@@ -171,6 +177,12 @@
                 test
             </scope>
 
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
         </dependency>
 
     </dependencies>

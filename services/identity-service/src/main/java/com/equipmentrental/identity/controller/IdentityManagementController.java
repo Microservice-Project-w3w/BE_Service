@@ -5,6 +5,8 @@ import com.equipmentrental.identity.dto.request.PermissionRequest;
 import com.equipmentrental.identity.dto.request.RolePermissionRequest;
 import com.equipmentrental.identity.dto.request.RoleRequest;
 import com.equipmentrental.identity.dto.request.UserRoleRequest;
+import com.equipmentrental.identity.dto.request.UserCreateRequest;
+import com.equipmentrental.identity.dto.request.UserScopeRequest;
 import com.equipmentrental.identity.dto.response.PermissionResponse;
 import com.equipmentrental.identity.dto.response.RoleResponse;
 import com.equipmentrental.identity.dto.response.SessionResponse;
@@ -89,6 +91,25 @@ public class IdentityManagementController {
     @PreAuthorize("hasAuthority('identity.user.read')")
     public ApiResponse<UserResponse> user(@PathVariable Long id) {
         return ApiResponse.success(service.getUser(id));
+    }
+
+    @GetMapping("/users")
+    @PreAuthorize("hasAuthority('identity.user.read')")
+    public ApiResponse<List<UserResponse>> users() {
+        return ApiResponse.success(service.users());
+    }
+
+    @PostMapping("/users")
+    @PreAuthorize("hasAuthority('identity.user.create')")
+    public ApiResponse<UserResponse> createUser(@Valid @RequestBody UserCreateRequest request) {
+        return ApiResponse.success(service.createUser(request));
+    }
+
+    @PutMapping("/users/{id}/scope")
+    @PreAuthorize("hasAuthority('identity.user.update')")
+    public ApiResponse<UserResponse> updateUserScope(
+            @PathVariable Long id, @RequestBody UserScopeRequest request) {
+        return ApiResponse.success(service.updateUserScope(id, request));
     }
 
     @PutMapping("/users/{id}/role")

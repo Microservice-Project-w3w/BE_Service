@@ -8,6 +8,12 @@ import lombok.Data;
 @Data
 public class CreateDeliveryTaskRequest {
     @NotNull
+    private Long organizationId;
+
+    @NotNull
+    private Long branchId;
+
+    @NotNull
     private Long rentalOrderId;
 
     @NotNull

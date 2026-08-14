@@ -10,6 +10,7 @@ import com.equipmentrental.organizationcustomer.exception.ConflictException;
 import com.equipmentrental.organizationcustomer.exception.NotFoundException;
 import com.equipmentrental.organizationcustomer.repository.CustomerGroupMemberRepository;
 import com.equipmentrental.organizationcustomer.repository.CustomerGroupRepository;
+import com.equipmentrental.organizationcustomer.security.OrganizationDataScopeGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +30,8 @@ public class CustomerGroupService {
     private final OrganizationService organizationService;
 
     private final CustomerService customerService;
+
+    private final OrganizationDataScopeGuard dataScopeGuard;
 
 
     // =====================================================
@@ -63,8 +66,8 @@ public class CustomerGroupService {
                                 ? CustomerGroupStatus.ACTIVE
                                 : request.status()
                 )
-                .createdBy(request.actorUserId())
-                .updatedBy(request.actorUserId())
+                .createdBy(dataScopeGuard.currentUserId())
+                .updatedBy(dataScopeGuard.currentUserId())
                 .build();
 
         return toResponse(
@@ -154,7 +157,7 @@ public class CustomerGroupService {
         }
 
         group.setUpdatedBy(
-                request.actorUserId()
+                dataScopeGuard.currentUserId()
         );
 
         return toResponse(
@@ -184,7 +187,7 @@ public class CustomerGroupService {
                 LocalDateTime.now()
         );
 
-        group.setUpdatedBy(actorUserId);
+        group.setUpdatedBy(dataScopeGuard.currentUserId());
 
         groupRepository.save(group);
     }
@@ -226,7 +229,7 @@ public class CustomerGroupService {
                         .organizationId(organizationId)
                         .customerGroupId(groupId)
                         .customerId(customerId)
-                        .createdBy(actorUserId)
+                        .createdBy(dataScopeGuard.currentUserId())
                         .build();
 
         return memberToResponse(
@@ -253,6 +256,14 @@ public class CustomerGroupService {
                         groupId
                 )
                 .stream()
+                .filter(member -> {
+                    try {
+                        customerService.getEntity(organizationId, member.getCustomerId());
+                        return true;
+                    } catch (org.springframework.security.access.AccessDeniedException denied) {
+                        return false;
+                    }
+                })
                 .map(this::memberToResponse)
                 .toList();
     }
