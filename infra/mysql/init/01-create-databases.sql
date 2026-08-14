@@ -1417,4 +1417,147 @@ CREATE TABLE return_record_items (
     INDEX idx_return_item_condition (returned_condition)
 );
 CREATE DATABASE IF NOT EXISTS billing_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE billing_db;
+
+-- 1. BẢNG HÓA ĐƠN (INVOICES)
+CREATE TABLE invoices (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    organization_id BIGINT NOT NULL,
+    branch_id BIGINT NOT NULL,
+    contract_id BIGINT NOT NULL,
+    rental_order_id BIGINT NOT NULL,
+    customer_id BIGINT NOT NULL,
+    invoice_type VARCHAR(30) NOT NULL,
+    total_amount DECIMAL(15, 2) NOT NULL,
+    status VARCHAR(30) NOT NULL,
+    due_date TIMESTAMP,
+    request_reference VARCHAR(100) UNIQUE,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL
+);
+
+-- 2. CHI TIẾT HÓA ĐƠN (INVOICE ITEMS)
+CREATE TABLE invoice_items (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    invoice_id BIGINT NOT NULL,
+    item_type VARCHAR(30) NOT NULL,
+    description VARCHAR(255) NOT NULL,
+    quantity DECIMAL(15, 2) NOT NULL,
+    unit_price DECIMAL(15, 2) NOT NULL,
+    amount DECIMAL(15, 2) NOT NULL,
+    reference_type VARCHAR(50),
+    reference_id BIGINT,
+    request_reference VARCHAR(100) UNIQUE,
+    CONSTRAINT fk_invoice_items_invoice FOREIGN KEY (invoice_id) REFERENCES invoices(id)
+);
+
+-- 3. CÁC KHOẢN PHÍ PHÁT SINH (INCURRED FEES)
+CREATE TABLE incurred_fees (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    invoice_id BIGINT NOT NULL,
+    fee_type VARCHAR(30) NOT NULL,
+    amount DECIMAL(15, 2) NOT NULL,
+    description VARCHAR(255),
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL,
+    CONSTRAINT fk_incurred_fees_invoice FOREIGN KEY (invoice_id) REFERENCES invoices(id)
+);
+
+-- 4. THANH TOÁN (PAYMENTS)
+CREATE TABLE payments (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    invoice_id BIGINT NOT NULL,
+    payment_reference VARCHAR(100) NOT NULL UNIQUE,
+    amount DECIMAL(15, 2) NOT NULL,
+    payment_method VARCHAR(30) NOT NULL,
+    status VARCHAR(30) NOT NULL,
+    confirmation_time TIMESTAMP,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL,
+    CONSTRAINT fk_payments_invoice FOREIGN KEY (invoice_id) REFERENCES invoices(id)
+);
+
+-- 5. HOÀN TIỀN THANH TOÁN (PAYMENT REFUNDS)
+CREATE TABLE payment_refunds (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    payment_id BIGINT NOT NULL,
+    amount DECIMAL(15, 2) NOT NULL,
+    reason VARCHAR(500) NOT NULL,
+    actor_user_id BIGINT NOT NULL,
+    refunded_at TIMESTAMP NOT NULL,
+    CONSTRAINT fk_refunds_payment FOREIGN KEY (payment_id) REFERENCES payments(id)
+);
+
+-- 6. ĐẶT CỌC (DEPOSITS)
+CREATE TABLE deposits (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    organization_id BIGINT NOT NULL,
+    branch_id BIGINT NOT NULL,
+    customer_id BIGINT NOT NULL,
+    rental_order_id BIGINT NOT NULL,
+    rental_contract_id BIGINT NOT NULL,
+    amount DECIMAL(15, 2) NOT NULL,
+    deducted_amount DECIMAL(15, 2) NOT NULL DEFAULT 0.00,
+    refunded_amount DECIMAL(15, 2) NOT NULL DEFAULT 0.00,
+    payment_method VARCHAR(30) NOT NULL,
+    reference VARCHAR(100),
+    notes VARCHAR(1000),
+    status VARCHAR(30) NOT NULL DEFAULT 'HELD',
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL
+);
+
+-- 7. CÔNG NỢ (DEBTS)
+CREATE TABLE debts (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    organization_id BIGINT NOT NULL,
+    branch_id BIGINT NOT NULL,
+    customer_id BIGINT NOT NULL,
+    invoice_id BIGINT NOT NULL,
+    amount DECIMAL(15, 2) NOT NULL DEFAULT 0.00,
+    remaining_amount DECIMAL(15, 2) NOT NULL DEFAULT 0.00,
+    due_at TIMESTAMP,
+    reason VARCHAR(500),
+    status VARCHAR(30) NOT NULL DEFAULT 'OPEN',
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL
+);
+
+-- 8. LỊCH SỬ HÓA ĐƠN (INVOICE HISTORY)
+CREATE TABLE invoice_history (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    invoice_id BIGINT NOT NULL,
+    action VARCHAR(50) NOT NULL,
+    old_status VARCHAR(30),
+    new_status VARCHAR(30),
+    description VARCHAR(500),
+    actor_user_id BIGINT,
+    created_at TIMESTAMP NOT NULL
+);
+
+-- 9. LỊCH SỬ ĐẶT CỌC (DEPOSIT HISTORY)
+CREATE TABLE deposit_history (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    deposit_id BIGINT NOT NULL,
+    action VARCHAR(50) NOT NULL,
+    amount DECIMAL(15, 2),
+    old_status VARCHAR(30),
+    new_status VARCHAR(30),
+    description VARCHAR(500),
+    actor_user_id BIGINT,
+    created_at TIMESTAMP NOT NULL
+);
+
+-- 10. GIAO DỊCH ĐẶT CỌC (DEPOSIT TRANSACTIONS)
+CREATE TABLE deposit_transactions (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    contract_id BIGINT NOT NULL,
+    transaction_type VARCHAR(30) NOT NULL,
+    amount DECIMAL(15, 2) NOT NULL,
+    status VARCHAR(30) NOT NULL,
+    reference_id VARCHAR(100),
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL
+);
+
 CREATE DATABASE IF NOT EXISTS maintenance_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
