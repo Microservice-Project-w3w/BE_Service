@@ -24,6 +24,7 @@ public class SessionService {
     private final UserSessionRepository repository;
     private final long refreshTokenDays;
 
+
     public SessionService(UserSessionRepository repository,
                           @Value("${security.jwt.refresh-token-days:7}") long refreshTokenDays) {
         this.repository = repository;

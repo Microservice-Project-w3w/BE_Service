@@ -36,6 +36,7 @@ public class RoleDataInitializer {
         }
     }
 
+
     private void migrateLegacyRoles(RoleRepository roleRepository, UserRepository userRepository) {
         for (Map.Entry<String, String> migration : LEGACY_ROLE_MAPPINGS.entrySet()) {
             roleRepository.findByCode(migration.getKey()).ifPresent(legacyRole -> {

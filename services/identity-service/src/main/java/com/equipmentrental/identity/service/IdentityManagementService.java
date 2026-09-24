@@ -50,6 +50,7 @@ public class IdentityManagementService {
     }
     public RoleResponse updateRole(Long id, RoleRequest request) {
         Role role = role(id);
+
         if (!role.getCode().equals(request.code().trim()) && roleRepository.findByCode(request.code().trim()).isPresent()) {
             throw new BusinessException(CommonErrorCode.RESOURCE_CONFLICT, "Mã vai trò đã tồn tại");
         }

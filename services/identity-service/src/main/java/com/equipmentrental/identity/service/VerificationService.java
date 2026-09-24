@@ -22,6 +22,7 @@ public class VerificationService {
     private final PasswordEncoder passwordEncoder;
     private final boolean exposeCode;
 
+
     public VerificationService(VerificationCodeRepository repository, PasswordEncoder passwordEncoder,
                                @Value("${app.auth.expose-verification-code:false}") boolean exposeCode) {
         this.repository = repository;

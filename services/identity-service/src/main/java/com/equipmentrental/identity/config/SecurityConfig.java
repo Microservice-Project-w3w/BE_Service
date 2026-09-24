@@ -41,6 +41,7 @@ public class SecurityConfig {
         );
     }
 
+
     @Bean
     public JwtDecoder jwtDecoder(
             @Value("${security.jwt.secret-base64}") String secretBase64,

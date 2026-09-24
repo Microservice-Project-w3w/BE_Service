@@ -26,6 +26,7 @@ import java.util.Map;
 @RequestMapping("/api/v1/auth")
 public class AuthController {
 
+
     private final AuthService authService;
 
     public AuthController(AuthService authService) {
@@ -77,6 +78,7 @@ public class AuthController {
         }
         return ApiResponse.success(response);
     }
+
 
     @PostMapping("/verify-email")
     public ApiResponse<Void> verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
