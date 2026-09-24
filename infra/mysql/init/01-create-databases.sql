@@ -933,6 +933,9 @@ CREATE TABLE IF NOT EXISTS rental_prices (
     CONSTRAINT chk_deposit_value_non_negative
     CHECK (deposit_value >= 0),
 
+    CONSTRAINT chk_deposit_percent_max
+    CHECK (deposit_type <> 'PERCENT' OR deposit_value <= 100),
+
     CONSTRAINT chk_late_fee_non_negative
     CHECK (late_fee >= 0),
 

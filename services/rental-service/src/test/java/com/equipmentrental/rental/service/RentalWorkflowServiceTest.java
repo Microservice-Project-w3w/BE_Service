@@ -3,8 +3,11 @@ package com.equipmentrental.rental.service;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.equipmentrental.rental.client.InventoryClient;
+import com.equipmentrental.rental.dto.request.RentalPriceRequest;
 import com.equipmentrental.rental.entity.Quotation;
 import com.equipmentrental.rental.entity.QuotationStatus;
+import com.equipmentrental.rental.entity.DepositType;
+import com.equipmentrental.rental.entity.RentalUnit;
 import com.equipmentrental.rental.exception.ApiException;
 import com.equipmentrental.rental.repository.QuotationRepository;
 import com.equipmentrental.rental.repository.RentalOrderRepository;
@@ -16,6 +19,8 @@ import com.equipmentrental.common.security.CurrentUserProvider;
 import com.equipmentrental.common.security.DataScopeAuthorizer;
 import java.lang.reflect.Proxy;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.math.BigDecimal;
 import java.util.Set;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -53,6 +58,35 @@ class RentalWorkflowServiceTest {
         assertThatThrownBy(() -> service.acceptQuotation(10L))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("phê duyệt");
+    }
+
+    @Test
+    void percentageDepositCannotExceedOneHundred() {
+        RentalDataScopeGuard guard = new RentalDataScopeGuard(new CurrentUserProvider(), new DataScopeAuthorizer());
+        PricingService service = new PricingService(
+                repository(RentalPriceRepository.class, null),
+                repository(DiscountCodeRepository.class, null),
+                guard);
+        authenticateManager();
+
+        RentalPriceRequest request = new RentalPriceRequest(
+                "Giá ngày",
+                1L,
+                2L,
+                3L,
+                RentalUnit.DAY,
+                BigDecimal.valueOf(100),
+                DepositType.PERCENT,
+                BigDecimal.valueOf(100.01),
+                BigDecimal.ZERO,
+                LocalDateTime.now(),
+                null,
+                true,
+                null);
+
+        assertThatThrownBy(() -> service.createPrice(request))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("0 đến 100");
     }
 
     @SuppressWarnings("unchecked")

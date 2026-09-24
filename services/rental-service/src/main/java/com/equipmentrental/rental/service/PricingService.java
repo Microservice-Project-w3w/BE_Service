@@ -31,6 +31,7 @@ public class PricingService {
     public RentalPriceResponse createPrice(RentalPriceRequest r) {
         if (r.validTo() != null && r.validTo().isBefore(r.validFrom()))
             throw new ApiException("validTo phải sau validFrom");
+        validateDeposit(r.depositType(), r.depositValue());
         dataScopeGuard.requireBranch(r.organizationId(), r.branchId());
         RentalPrice e = new RentalPrice();
         e.setPriceName(r.priceName());
@@ -60,6 +61,7 @@ public class PricingService {
     public RentalPriceResponse updatePrice(Long id, RentalPriceRequest r) {
         if (r.validTo() != null && r.validTo().isBefore(r.validFrom()))
             throw new ApiException("validTo phải sau validFrom");
+        validateDeposit(r.depositType(), r.depositValue());
         RentalPrice e = prices.findById(id).orElseThrow(() -> ApiException.notFound("Không tìm thấy bảng giá"));
         dataScopeGuard.requireBranch(e.getOrganizationId(), e.getBranchId());
         if (!e.getOrganizationId().equals(r.organizationId())
@@ -80,6 +82,12 @@ public class PricingService {
         if (r.active() != null) e.setActive(r.active());
         e.setDescription(r.description());
         return RentalResponseMapper.price(prices.save(e));
+    }
+
+    private void validateDeposit(DepositType depositType, BigDecimal depositValue) {
+        if (depositType == DepositType.PERCENT && depositValue.compareTo(BigDecimal.valueOf(100)) > 0) {
+            throw new ApiException("Tiền cọc theo phần trăm phải nằm trong khoảng từ 0 đến 100");
+        }
     }
 
     public DiscountCodeResponse createDiscount(DiscountCodeRequest r) {

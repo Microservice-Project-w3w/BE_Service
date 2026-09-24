@@ -9,6 +9,6 @@ public interface RentalPriceRepository extends JpaRepository<RentalPrice, Long> 
 
     List<RentalPrice> findByEquipmentTypeIdAndActiveTrue(Long equipmentTypeId);
 
-    Optional<RentalPrice> findFirstByEquipmentTypeIdAndRentalUnitAndActiveTrueOrderByValidFromDesc(
-            Long equipmentTypeId, RentalUnit unit);
+    Optional<RentalPrice> findFirstByOrganizationIdAndBranchIdAndEquipmentTypeIdAndRentalUnitAndActiveTrueOrderByValidFromDesc(
+            Long organizationId, Long branchId, Long equipmentTypeId, RentalUnit unit);
 }
