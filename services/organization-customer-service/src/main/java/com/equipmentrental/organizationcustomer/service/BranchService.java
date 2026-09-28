@@ -1,0 +1,49 @@
+package com.equipmentrental.organizationcustomer.service;
+
+import com.equipmentrental.organizationcustomer.dto.request.BranchRequest;
+import com.equipmentrental.organizationcustomer.dto.response.BranchResponse;
+import com.equipmentrental.organizationcustomer.entity.Branch;
+import com.equipmentrental.organizationcustomer.enums.BranchStatus;
+import com.equipmentrental.organizationcustomer.exception.ConflictException;
+import com.equipmentrental.organizationcustomer.repository.BranchRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@RequiredArgsConstructor
+@Transactional
+public class BranchService {
+    private final BranchRepository branchRepository;
+    private final OrganizationService organizationService;
+
+    public BranchResponse create(Long organizationId, BranchRequest request) {
+        organizationService.getEntity(organizationId);
+        if (branchRepository.existsByOrganizationIdAndBranchCodeAndDeletedAtIsNull(
+                organizationId, request.branchCode())) {
+            throw new ConflictException("Mã chi nhánh đã tồn tại trong doanh nghiệp");
+        }
+        try {
+            return toResponse(branchRepository.save(Branch.builder()
+                    .organizationId(organizationId).branchCode(request.branchCode().trim())
+                    .branchName(request.branchName().trim()).email(clean(request.email()))
+                    .phone(clean(request.phone())).address(clean(request.address()))
+                    .status(request.status() == null ? BranchStatus.ACTIVE : request.status())
+                    .createdBy(request.actorUserId()).updatedBy(request.actorUserId()).build()));
+        } catch (DataIntegrityViolationException exception) {
+            throw new ConflictException("Mã chi nhánh đã tồn tại trong doanh nghiệp");
+        }
+    }
+
+    private BranchResponse toResponse(Branch branch) {
+        return new BranchResponse(branch.getId(), branch.getOrganizationId(), branch.getBranchCode(),
+                branch.getBranchName(), branch.getEmail(), branch.getPhone(), branch.getAddress(),
+                branch.getStatus(), branch.getCreatedBy(), branch.getUpdatedBy(), branch.getCreatedAt(),
+                branch.getUpdatedAt());
+    }
+
+    private String clean(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+}
