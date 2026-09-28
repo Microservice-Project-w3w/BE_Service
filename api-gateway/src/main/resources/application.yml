@@ -22,7 +22,7 @@ spring:
         - id: rental-api
           uri: ${RENTAL_SERVICE_URL:http://localhost:8084}
           predicates:
-            - Path=/api/v1/rental-requests,/api/v1/rental-requests/**,/api/v1/quotations,/api/v1/quotations/**,/api/v1/rental-orders,/api/v1/rental-orders/**,/api/v1/rental-contracts,/api/v1/rental-contracts/**,/api/v1/availability,/api/v1/availability/**
+            - Path=/api/v1/rental-requests,/api/v1/rental-requests/**,/api/v1/quotations,/api/v1/quotations/**,/api/v1/rental-orders,/api/v1/rental-orders/**,/api/v1/rental-contracts,/api/v1/rental-contracts/**,/api/v1/availability,/api/v1/availability/**,/api/v1/equipment/search,/api/v1/rental-prices,/api/v1/rental-prices/**,/api/v1/discount-codes,/api/v1/discount-codes/**
         - id: ai-api
           uri: ${AI_SERVICE_URL:http://localhost:8090}
           predicates:
