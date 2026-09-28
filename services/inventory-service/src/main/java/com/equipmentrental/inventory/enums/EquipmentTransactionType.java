@@ -1,4 +1,4 @@
-﻿package com.equipmentrental.inventory.enums;
+package com.equipmentrental.inventory.enums;
 
 public enum EquipmentTransactionType {
 

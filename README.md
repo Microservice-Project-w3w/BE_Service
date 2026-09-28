@@ -188,4 +188,4 @@ mvn -pl api-gateway spring-boot:run
 mvn -pl services/ai-service spring-boot:run
 ```
 
-Mỗi service có database riêng được tạo bởi `infra/mysql/init.sql`. Migration đặt trong đúng service: `src/main/resources/db/migration`. Khi bắt đầu viết entity, đổi `spring.flyway.enabled` sang `true`; không dùng `ddl-auto=update` trên môi trường chung.
+Schema cũ của 4 service được giữ tại `infra/mysql/init/01-core-service-schema.sql`; role/permission seed gốc ở `services/identity-service/src/main/resources/security/` và `docs/security/`. Migration đặt trong đúng service: `src/main/resources/db/migration`. Khi bắt đầu viết entity, đổi `spring.flyway.enabled` sang `true`; không dùng `ddl-auto=update` trên môi trường chung.

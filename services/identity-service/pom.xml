@@ -4,6 +4,9 @@
   <parent><groupId>com.equipmentrental</groupId><artifactId>equipment-rental-microservices</artifactId><version>0.1.0-SNAPSHOT</version><relativePath>../../pom.xml</relativePath></parent>
   <artifactId>identity-service</artifactId>
   <dependencies>
+    <dependency><groupId>com.equipmentrental</groupId><artifactId>common-web</artifactId><version>0.1.0-SNAPSHOT</version></dependency>
+    <dependency><groupId>com.equipmentrental</groupId><artifactId>common-security</artifactId><version>0.1.0-SNAPSHOT</version></dependency>
+    <dependency><groupId>com.equipmentrental</groupId><artifactId>event-contracts</artifactId><version>0.1.0-SNAPSHOT</version></dependency>
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-web</artifactId></dependency>
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-data-jpa</artifactId></dependency>
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-validation</artifactId></dependency>
