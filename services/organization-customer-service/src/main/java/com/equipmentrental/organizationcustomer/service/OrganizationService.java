@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -88,6 +89,14 @@ public class OrganizationService {
         } catch (DataIntegrityViolationException exception) {
             throw new ConflictException("Mã doanh nghiệp hoặc mã số thuế đã tồn tại");
         }
+    }
+
+    public void delete(Long id, Long actorUserId) {
+        Organization organization = getEntity(id);
+        organization.setStatus(OrganizationStatus.DELETED);
+        organization.setDeletedAt(LocalDateTime.now());
+        organization.setUpdatedBy(actorUserId);
+        repository.save(organization);
     }
 
     private OrganizationResponse toResponse(Organization organization) {

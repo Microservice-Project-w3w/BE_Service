@@ -16,6 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 import java.util.List;
 import java.util.Optional;
 
@@ -109,5 +110,17 @@ class OrganizationServiceTest {
         when(repository.existsByOrganizationCodeAndDeletedAtIsNull("ORG-02")).thenReturn(true);
         var request = new OrganizationRequest("ORG-02", "Acme", null, null, null, null, null, null);
         assertThatThrownBy(() -> service.update(1L, request)).isInstanceOf(ConflictException.class);
+    }
+
+    @Test
+    void deleteSoftDeletesOrganization() {
+        Organization organization = Organization.builder().id(1L).organizationCode("ORG-01")
+                .organizationName("Acme").status(OrganizationStatus.ACTIVE).build();
+        when(repository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(organization));
+        service.delete(1L, 7L);
+        assertThat(organization.getStatus()).isEqualTo(OrganizationStatus.DELETED);
+        assertThat(organization.getDeletedAt()).isNotNull();
+        assertThat(organization.getUpdatedBy()).isEqualTo(7L);
+        verify(repository).save(organization);
     }
 }

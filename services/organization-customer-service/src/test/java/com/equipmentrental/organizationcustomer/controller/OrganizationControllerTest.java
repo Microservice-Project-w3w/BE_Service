@@ -21,6 +21,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -101,5 +102,12 @@ class OrganizationControllerTest {
                         .content("{\"organizationCode\":\"ORG-01\",\"organizationName\":\"Acme Updated\",\"actorUserId\":7}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.organizationName").value("Acme Updated"));
+    }
+
+    @Test
+    void deactivateReturns204() throws Exception {
+        mockMvc.perform(delete("/api/v1/organizations/1").param("actorUserId", "7"))
+                .andExpect(status().isNoContent());
+        org.mockito.Mockito.verify(service).delete(1L, 7L);
     }
 }
