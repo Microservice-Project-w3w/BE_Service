@@ -14,10 +14,12 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.stream.Stream;
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -69,5 +71,14 @@ class OrganizationControllerTest {
                 Arguments.of("phone", "1".repeat(31)),
                 Arguments.of("address", "A".repeat(501))
         );
+    }
+
+    @Test
+    void listReturnsOrganizations() throws Exception {
+        when(service.getAll()).thenReturn(List.of(new OrganizationResponse(1L, "ORG-01", "Acme", null,
+                null, null, null, OrganizationStatus.ACTIVE, null, null, null, null)));
+        mockMvc.perform(get("/api/v1/organizations"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].organizationCode").value("ORG-01"));
     }
 }

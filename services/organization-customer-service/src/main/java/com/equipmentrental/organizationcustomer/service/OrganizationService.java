@@ -11,6 +11,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -40,6 +42,21 @@ public class OrganizationService {
         return new OrganizationResponse(saved.getId(), saved.getOrganizationCode(), saved.getOrganizationName(),
                 saved.getTaxCode(), saved.getEmail(), saved.getPhone(), saved.getAddress(), saved.getStatus(),
                 saved.getCreatedBy(), saved.getUpdatedBy(), saved.getCreatedAt(), saved.getUpdatedAt());
+    }
+
+    @Transactional(readOnly = true)
+    public List<OrganizationResponse> getAll() {
+        return repository.findAllByDeletedAtIsNullOrderByIdDesc().stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    private OrganizationResponse toResponse(Organization organization) {
+        return new OrganizationResponse(organization.getId(), organization.getOrganizationCode(),
+                organization.getOrganizationName(), organization.getTaxCode(), organization.getEmail(),
+                organization.getPhone(), organization.getAddress(), organization.getStatus(),
+                organization.getCreatedBy(), organization.getUpdatedBy(), organization.getCreatedAt(),
+                organization.getUpdatedAt());
     }
 
     private String clean(String value) {

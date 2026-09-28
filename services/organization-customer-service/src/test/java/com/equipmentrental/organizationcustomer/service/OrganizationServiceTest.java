@@ -16,6 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import java.util.List;
 
 @ExtendWith(MockitoExtension.class)
 class OrganizationServiceTest {
@@ -59,5 +60,15 @@ class OrganizationServiceTest {
         assertThatThrownBy(() -> service.create(request))
                 .isInstanceOf(ConflictException.class)
                 .hasMessage("Mã doanh nghiệp hoặc mã số thuế đã tồn tại");
+    }
+
+    @Test
+    void getAllMapsActiveOrganizationsInRepositoryOrder() {
+        Organization organization = Organization.builder().id(1L).organizationCode("ORG-01")
+                .organizationName("Acme").status(OrganizationStatus.ACTIVE).build();
+        when(repository.findAllByDeletedAtIsNullOrderByIdDesc()).thenReturn(List.of(organization));
+        var result = service.getAll();
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().organizationCode()).isEqualTo("ORG-01");
     }
 }
