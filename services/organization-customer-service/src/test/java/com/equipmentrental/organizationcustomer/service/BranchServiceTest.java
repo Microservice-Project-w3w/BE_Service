@@ -16,6 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import java.util.List;
 
 @ExtendWith(MockitoExtension.class)
 class BranchServiceTest {
@@ -42,5 +43,16 @@ class BranchServiceTest {
                 .thenReturn(true);
         var request = new BranchRequest("BR-01", "Main", null, null, null, null, null);
         assertThatThrownBy(() -> branchService.create(1L, request)).isInstanceOf(ConflictException.class);
+    }
+
+    @Test
+    void getAllScopesQueryToOrganization() {
+        when(organizationService.getEntity(1L)).thenReturn(new Organization());
+        when(branchRepository.findAllByOrganizationIdAndDeletedAtIsNullOrderByIdDesc(1L))
+                .thenReturn(List.of(Branch.builder().id(2L).organizationId(1L).branchCode("BR-01")
+                        .branchName("Main").status(BranchStatus.ACTIVE).build()));
+        var result = branchService.getAll(1L);
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().organizationId()).isEqualTo(1L);
     }
 }

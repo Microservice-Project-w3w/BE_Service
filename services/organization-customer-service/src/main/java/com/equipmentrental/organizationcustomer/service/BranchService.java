@@ -11,6 +11,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -34,6 +36,13 @@ public class BranchService {
         } catch (DataIntegrityViolationException exception) {
             throw new ConflictException("Mã chi nhánh đã tồn tại trong doanh nghiệp");
         }
+    }
+
+    @Transactional(readOnly = true)
+    public List<BranchResponse> getAll(Long organizationId) {
+        organizationService.getEntity(organizationId);
+        return branchRepository.findAllByOrganizationIdAndDeletedAtIsNullOrderByIdDesc(organizationId)
+                .stream().map(this::toResponse).toList();
     }
 
     private BranchResponse toResponse(Branch branch) {

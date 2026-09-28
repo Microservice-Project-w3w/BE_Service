@@ -14,8 +14,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import java.util.List;
 
 @WebMvcTest(BranchController.class)
 class BranchControllerTest {
@@ -36,5 +38,14 @@ class BranchControllerTest {
         mockMvc.perform(post("/api/v1/organizations/1/branches").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"branchCode\":\"\",\"branchName\":\"\"}"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void listReturnsBranchesForOrganization() throws Exception {
+        when(branchService.getAll(1L)).thenReturn(List.of(new BranchResponse(2L, 1L, "BR-01",
+                "Main", null, null, null, BranchStatus.ACTIVE, null, null, null, null)));
+        mockMvc.perform(get("/api/v1/organizations/1/branches"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].organizationId").value(1L));
     }
 }
