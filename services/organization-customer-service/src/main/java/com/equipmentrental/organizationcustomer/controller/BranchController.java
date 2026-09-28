@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -38,5 +39,12 @@ public class BranchController {
     public BranchResponse getById(@PathVariable Long organizationId,
                                   @PathVariable Long branchId) {
         return branchService.getById(organizationId, branchId);
+    }
+
+    @PutMapping("/{branchId}")
+    public BranchResponse update(@PathVariable Long organizationId,
+                                 @PathVariable Long branchId,
+                                 @Valid @RequestBody BranchRequest request) {
+        return branchService.update(organizationId, branchId, request);
     }
 }

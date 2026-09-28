@@ -57,6 +57,29 @@ public class BranchService {
                         + " trong doanh nghiệp id = " + organizationId));
     }
 
+    public BranchResponse update(Long organizationId, Long branchId, BranchRequest request) {
+        Branch branch = getEntity(organizationId, branchId);
+        if (!branch.getBranchCode().equals(request.branchCode())
+                && branchRepository.existsByOrganizationIdAndBranchCodeAndDeletedAtIsNull(
+                organizationId, request.branchCode())) {
+            throw new ConflictException("Mã chi nhánh đã tồn tại trong doanh nghiệp");
+        }
+        branch.setBranchCode(request.branchCode().trim());
+        branch.setBranchName(request.branchName().trim());
+        branch.setEmail(clean(request.email()));
+        branch.setPhone(clean(request.phone()));
+        branch.setAddress(clean(request.address()));
+        if (request.status() != null) {
+            branch.setStatus(request.status());
+        }
+        branch.setUpdatedBy(request.actorUserId());
+        try {
+            return toResponse(branchRepository.save(branch));
+        } catch (DataIntegrityViolationException exception) {
+            throw new ConflictException("Mã chi nhánh đã tồn tại trong doanh nghiệp");
+        }
+    }
+
     private BranchResponse toResponse(Branch branch) {
         return new BranchResponse(branch.getId(), branch.getOrganizationId(), branch.getBranchCode(),
                 branch.getBranchName(), branch.getEmail(), branch.getPhone(), branch.getAddress(),

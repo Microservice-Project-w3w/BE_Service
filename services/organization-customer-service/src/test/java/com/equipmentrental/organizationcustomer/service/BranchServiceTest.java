@@ -73,4 +73,30 @@ class BranchServiceTest {
         assertThatThrownBy(() -> branchService.getById(1L, 2L))
                 .isInstanceOf(com.equipmentrental.organizationcustomer.exception.NotFoundException.class);
     }
+
+    @Test
+    void updateChangesBranchAndPreservesStatusWhenMissing() {
+        Branch branch = Branch.builder().id(2L).organizationId(1L).branchCode("BR-01")
+                .branchName("Main").status(BranchStatus.ACTIVE).build();
+        when(branchRepository.findByIdAndOrganizationIdAndDeletedAtIsNull(2L, 1L))
+                .thenReturn(Optional.of(branch));
+        when(branchRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        var result = branchService.update(1L, 2L,
+                new BranchRequest("BR-01", "Main Updated", null, null, null, null, 7L));
+        assertThat(result.branchName()).isEqualTo("Main Updated");
+        assertThat(result.status()).isEqualTo(BranchStatus.ACTIVE);
+        assertThat(result.updatedBy()).isEqualTo(7L);
+    }
+
+    @Test
+    void updateRejectsDuplicateCodeWithinOrganization() {
+        Branch branch = Branch.builder().id(2L).organizationId(1L).branchCode("BR-01")
+                .branchName("Main").status(BranchStatus.ACTIVE).build();
+        when(branchRepository.findByIdAndOrganizationIdAndDeletedAtIsNull(2L, 1L))
+                .thenReturn(Optional.of(branch));
+        when(branchRepository.existsByOrganizationIdAndBranchCodeAndDeletedAtIsNull(1L, "BR-02"))
+                .thenReturn(true);
+        var request = new BranchRequest("BR-02", "Main", null, null, null, null, null);
+        assertThatThrownBy(() -> branchService.update(1L, 2L, request)).isInstanceOf(ConflictException.class);
+    }
 }
