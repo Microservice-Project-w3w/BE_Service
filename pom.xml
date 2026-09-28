@@ -14,7 +14,7 @@
   <name>equipment-rental-microservices</name>
   <modules>
     <module>api-gateway</module>
-    <module>ai-service</module>
+    <module>services/ai-service</module>
     <module>services/identity-service</module>
     <module>services/organization-customer-service</module>
     <module>services/inventory-service</module>

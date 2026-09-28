@@ -2,7 +2,7 @@
 
 ## Chỉ được sửa trong phạm vi
 
-- Owner Gateway/AI: `api-gateway`, `ai-service`, `docs/`.
+- Owner Gateway/AI: `api-gateway`, `services/ai-service`, `docs/`.
 - Mỗi domain owner: đúng folder service của mình, migration và test của service đó.
 - Không copy entity/repository từ service khác, không mở kết nối sang database khác.
 - Không sửa Gateway route để “cho chạy tạm” trước khi downstream controller có test.

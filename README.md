@@ -6,7 +6,7 @@
 
 | Người | Folder được sửa chính | Việc phải hoàn thành | Port / DB |
 |---|---|---|---|
-| Bạn | `api-gateway`, `ai-service` | Gateway route/CORS/health, AI chat/Ollama, review contract | 8080 / 8090 |
+| Bạn | `api-gateway`, `services/ai-service` | Gateway route/CORS/health, AI chat/Ollama, review contract | 8080 / 8090 |
 | Người 1 | `services/identity-service` | Đăng nhập + user/role/permission/session | 8081 / `identity_db` |
 | Người 2 | `services/organization-customer-service` | Organization, branch, employee, customer | 8082 / `organization_customer_db` |
 | Người 3 | `services/inventory-service` | Danh mục, thiết bị, availability, reservation | 8083 / `inventory_db` |
@@ -185,7 +185,7 @@ Khi thêm truy vấn dữ liệu nghiệp vụ cho AI, AI service chỉ gọi AP
 cp .env.example .env
 cd infra && docker compose up -d
 mvn -pl api-gateway spring-boot:run
-mvn -pl ai-service spring-boot:run
+mvn -pl services/ai-service spring-boot:run
 ```
 
 Mỗi service có database riêng được tạo bởi `infra/mysql/init.sql`. Migration đặt trong đúng service: `src/main/resources/db/migration`. Khi bắt đầu viết entity, đổi `spring.flyway.enabled` sang `true`; không dùng `ddl-auto=update` trên môi trường chung.
