@@ -19,6 +19,7 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -89,5 +90,16 @@ class OrganizationControllerTest {
         mockMvc.perform(get("/api/v1/organizations/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.organizationName").value("Acme"));
+    }
+
+    @Test
+    void updateReturnsOrganization() throws Exception {
+        when(service.update(org.mockito.ArgumentMatchers.eq(1L), any())).thenReturn(
+                new OrganizationResponse(1L, "ORG-01", "Acme Updated", null, null, null, null,
+                        OrganizationStatus.ACTIVE, null, 7L, null, null));
+        mockMvc.perform(put("/api/v1/organizations/1").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"organizationCode\":\"ORG-01\",\"organizationName\":\"Acme Updated\",\"actorUserId\":7}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.organizationName").value("Acme Updated"));
     }
 }

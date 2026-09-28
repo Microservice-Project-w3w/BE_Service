@@ -87,4 +87,27 @@ class OrganizationServiceTest {
         assertThatThrownBy(() -> service.getById(99L))
                 .isInstanceOf(com.equipmentrental.organizationcustomer.exception.NotFoundException.class);
     }
+
+    @Test
+    void updateChangesOrganizationAndPreservesStatusWhenMissing() {
+        Organization organization = Organization.builder().id(1L).organizationCode("ORG-01")
+                .organizationName("Acme").status(OrganizationStatus.ACTIVE).build();
+        when(repository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(organization));
+        when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        var request = new OrganizationRequest("ORG-01", "Acme Updated", null, null, null, null, null, 7L);
+        var result = service.update(1L, request);
+        assertThat(result.organizationName()).isEqualTo("Acme Updated");
+        assertThat(result.status()).isEqualTo(OrganizationStatus.ACTIVE);
+        assertThat(result.updatedBy()).isEqualTo(7L);
+    }
+
+    @Test
+    void updateRejectsDuplicateOrganizationCode() {
+        Organization organization = Organization.builder().id(1L).organizationCode("ORG-01")
+                .organizationName("Acme").status(OrganizationStatus.ACTIVE).build();
+        when(repository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(organization));
+        when(repository.existsByOrganizationCodeAndDeletedAtIsNull("ORG-02")).thenReturn(true);
+        var request = new OrganizationRequest("ORG-02", "Acme", null, null, null, null, null, null);
+        assertThatThrownBy(() -> service.update(1L, request)).isInstanceOf(ConflictException.class);
+    }
 }

@@ -62,6 +62,34 @@ public class OrganizationService {
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy doanh nghiệp id = " + id));
     }
 
+    public OrganizationResponse update(Long id, OrganizationRequest request) {
+        Organization organization = getEntity(id);
+        if (!organization.getOrganizationCode().equals(request.organizationCode())
+                && repository.existsByOrganizationCodeAndDeletedAtIsNull(request.organizationCode())) {
+            throw new ConflictException("Mã doanh nghiệp đã tồn tại");
+        }
+        String taxCode = clean(request.taxCode());
+        if (taxCode != null && !taxCode.equals(organization.getTaxCode())
+                && repository.existsByTaxCodeAndDeletedAtIsNull(taxCode)) {
+            throw new ConflictException("Mã số thuế đã tồn tại");
+        }
+        organization.setOrganizationCode(request.organizationCode().trim());
+        organization.setOrganizationName(request.organizationName().trim());
+        organization.setTaxCode(taxCode);
+        organization.setEmail(clean(request.email()));
+        organization.setPhone(clean(request.phone()));
+        organization.setAddress(clean(request.address()));
+        if (request.status() != null) {
+            organization.setStatus(request.status());
+        }
+        organization.setUpdatedBy(request.actorUserId());
+        try {
+            return toResponse(repository.save(organization));
+        } catch (DataIntegrityViolationException exception) {
+            throw new ConflictException("Mã doanh nghiệp hoặc mã số thuế đã tồn tại");
+        }
+    }
+
     private OrganizationResponse toResponse(Organization organization) {
         return new OrganizationResponse(organization.getId(), organization.getOrganizationCode(),
                 organization.getOrganizationName(), organization.getTaxCode(), organization.getEmail(),
