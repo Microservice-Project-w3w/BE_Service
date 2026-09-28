@@ -17,6 +17,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import java.util.List;
+import java.util.Optional;
 
 @ExtendWith(MockitoExtension.class)
 class OrganizationServiceTest {
@@ -70,5 +71,20 @@ class OrganizationServiceTest {
         var result = service.getAll();
         assertThat(result).hasSize(1);
         assertThat(result.getFirst().organizationCode()).isEqualTo("ORG-01");
+    }
+
+    @Test
+    void getByIdReturnsOrganization() {
+        Organization organization = Organization.builder().id(1L).organizationCode("ORG-01")
+                .organizationName("Acme").status(OrganizationStatus.ACTIVE).build();
+        when(repository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(organization));
+        assertThat(service.getById(1L).organizationName()).isEqualTo("Acme");
+    }
+
+    @Test
+    void getByIdRejectsMissingOrganization() {
+        when(repository.findByIdAndDeletedAtIsNull(99L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.getById(99L))
+                .isInstanceOf(com.equipmentrental.organizationcustomer.exception.NotFoundException.class);
     }
 }

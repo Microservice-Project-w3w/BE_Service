@@ -5,6 +5,7 @@ import com.equipmentrental.organizationcustomer.dto.response.OrganizationRespons
 import com.equipmentrental.organizationcustomer.entity.Organization;
 import com.equipmentrental.organizationcustomer.enums.OrganizationStatus;
 import com.equipmentrental.organizationcustomer.exception.ConflictException;
+import com.equipmentrental.organizationcustomer.exception.NotFoundException;
 import com.equipmentrental.organizationcustomer.repository.OrganizationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -49,6 +50,16 @@ public class OrganizationService {
         return repository.findAllByDeletedAtIsNullOrderByIdDesc().stream()
                 .map(this::toResponse)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public OrganizationResponse getById(Long id) {
+        return toResponse(getEntity(id));
+    }
+
+    public Organization getEntity(Long id) {
+        return repository.findByIdAndDeletedAtIsNull(id)
+                .orElseThrow(() -> new NotFoundException("Không tìm thấy doanh nghiệp id = " + id));
     }
 
     private OrganizationResponse toResponse(Organization organization) {

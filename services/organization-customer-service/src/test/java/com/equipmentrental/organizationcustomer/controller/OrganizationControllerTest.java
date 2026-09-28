@@ -81,4 +81,13 @@ class OrganizationControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].organizationCode").value("ORG-01"));
     }
+
+    @Test
+    void detailReturnsOrganization() throws Exception {
+        when(service.getById(1L)).thenReturn(new OrganizationResponse(1L, "ORG-01", "Acme", null,
+                null, null, null, OrganizationStatus.ACTIVE, null, null, null, null));
+        mockMvc.perform(get("/api/v1/organizations/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.organizationName").value("Acme"));
+    }
 }
