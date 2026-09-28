@@ -1,0 +1,67 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      routes:
+        - id: identity-api
+          uri: ${IDENTITY_SERVICE_URL:http://localhost:8081}
+          predicates:
+            - Path=/api/v1/auth,/api/v1/auth/**,/api/v1/users,/api/v1/users/**,/api/v1/roles,/api/v1/roles/**,/api/v1/permissions,/api/v1/permissions/**,/api/v1/sessions,/api/v1/sessions/**
+        - id: organization-customer-api
+          uri: ${ORGANIZATION_CUSTOMER_SERVICE_URL:http://localhost:8082}
+          predicates:
+            - Path=/api/v1/organizations,/api/v1/organizations/**,/api/v1/branches,/api/v1/branches/**,/api/v1/employees,/api/v1/employees/**,/api/v1/customers,/api/v1/customers/**
+        - id: inventory-api
+          uri: ${INVENTORY_SERVICE_URL:http://localhost:8083}
+          predicates:
+            - Path=/api/v1/inventory,/api/v1/inventory/**
+        - id: rental-api
+          uri: ${RENTAL_SERVICE_URL:http://localhost:8084}
+          predicates:
+            - Path=/api/v1/rental-requests,/api/v1/rental-requests/**,/api/v1/quotations,/api/v1/quotations/**,/api/v1/rental-orders,/api/v1/rental-orders/**,/api/v1/rental-contracts,/api/v1/rental-contracts/**,/api/v1/availability,/api/v1/availability/**
+        - id: ai-api
+          uri: ${AI_SERVICE_URL:http://localhost:8090}
+          predicates:
+            - Path=/api/v1/ai,/api/v1/ai/**
+          filters:
+            - StripPrefix=3
+            - PrefixPath=/api/v1
+        - id: identity-health
+          uri: ${IDENTITY_SERVICE_URL:http://localhost:8081}
+          predicates: [Path=/gateway/health/identity]
+          filters: [SetPath=/health]
+        - id: organization-customer-health
+          uri: ${ORGANIZATION_CUSTOMER_SERVICE_URL:http://localhost:8082}
+          predicates: [Path=/gateway/health/organization-customer]
+          filters: [SetPath=/health]
+        - id: inventory-health
+          uri: ${INVENTORY_SERVICE_URL:http://localhost:8083}
+          predicates: [Path=/gateway/health/inventory]
+          filters: [SetPath=/health]
+        - id: rental-health
+          uri: ${RENTAL_SERVICE_URL:http://localhost:8084}
+          predicates: [Path=/gateway/health/rental]
+          filters: [SetPath=/health]
+        - id: ai-health
+          uri: ${AI_SERVICE_URL:http://localhost:8090}
+          predicates: [Path=/gateway/health/ai]
+          filters: [SetPath=/api/v1/health]
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin RETAIN_UNIQUE
+      globalcors:
+        add-to-simple-url-handler-mapping: true
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: ["${FRONTEND_URL:http://localhost:5173}"]
+            allowedMethods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
+            allowedHeaders: ['*']
+            exposedHeaders: [Authorization, X-Trace-Id]
+            allowCredentials: true
+            maxAge: 3600
+management:
+  endpoints.web.exposure.include: health,info
+  endpoint.health.show-details: always

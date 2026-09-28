@@ -1,0 +1,16 @@
+server:
+  port: ${SERVER_PORT:8081}
+spring:
+  application.name: identity-service
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/identity_db?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=utf8
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:${MYSQL_ROOT_PASSWORD:change-me}}
+  jpa:
+    hibernate.ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: false
+management:
+  endpoints.web.exposure.include: health,info
+  endpoint.health.show-details: always
