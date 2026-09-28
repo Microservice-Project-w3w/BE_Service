@@ -5,6 +5,7 @@ import com.equipmentrental.organizationcustomer.dto.response.BranchResponse;
 import com.equipmentrental.organizationcustomer.entity.Branch;
 import com.equipmentrental.organizationcustomer.enums.BranchStatus;
 import com.equipmentrental.organizationcustomer.exception.ConflictException;
+import com.equipmentrental.organizationcustomer.exception.NotFoundException;
 import com.equipmentrental.organizationcustomer.repository.BranchRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -43,6 +44,17 @@ public class BranchService {
         organizationService.getEntity(organizationId);
         return branchRepository.findAllByOrganizationIdAndDeletedAtIsNullOrderByIdDesc(organizationId)
                 .stream().map(this::toResponse).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public BranchResponse getById(Long organizationId, Long branchId) {
+        return toResponse(getEntity(organizationId, branchId));
+    }
+
+    public Branch getEntity(Long organizationId, Long branchId) {
+        return branchRepository.findByIdAndOrganizationIdAndDeletedAtIsNull(branchId, organizationId)
+                .orElseThrow(() -> new NotFoundException("Không tìm thấy chi nhánh id = " + branchId
+                        + " trong doanh nghiệp id = " + organizationId));
     }
 
     private BranchResponse toResponse(Branch branch) {

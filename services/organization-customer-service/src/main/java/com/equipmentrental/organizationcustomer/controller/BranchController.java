@@ -33,4 +33,10 @@ public class BranchController {
     public List<BranchResponse> getAll(@PathVariable Long organizationId) {
         return branchService.getAll(organizationId);
     }
+
+    @GetMapping("/{branchId}")
+    public BranchResponse getById(@PathVariable Long organizationId,
+                                  @PathVariable Long branchId) {
+        return branchService.getById(organizationId, branchId);
+    }
 }

@@ -48,4 +48,13 @@ class BranchControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].organizationId").value(1L));
     }
+
+    @Test
+    void detailReturnsBranchWithinOrganization() throws Exception {
+        when(branchService.getById(1L, 2L)).thenReturn(new BranchResponse(2L, 1L, "BR-01",
+                "Main", null, null, null, BranchStatus.ACTIVE, null, null, null, null));
+        mockMvc.perform(get("/api/v1/organizations/1/branches/2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(2L));
+    }
 }
