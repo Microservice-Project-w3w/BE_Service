@@ -1,0 +1,28 @@
+package com.equipmentrental.organizationcustomer.repository;
+
+import com.equipmentrental.organizationcustomer.entity.Branch;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
+import java.util.Optional;
+
+public interface BranchRepository
+        extends JpaRepository<Branch, Long> {
+
+    Optional<Branch>
+    findByIdAndOrganizationIdAndDeletedAtIsNull(
+            Long id,
+            Long organizationId
+    );
+
+    List<Branch>
+    findAllByOrganizationIdAndDeletedAtIsNullOrderByIdDesc(
+            Long organizationId
+    );
+
+    boolean
+    existsByOrganizationIdAndBranchCodeAndDeletedAtIsNull(
+            Long organizationId,
+            String branchCode
+    );
+}
