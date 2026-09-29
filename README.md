@@ -6,13 +6,13 @@
 
 | Người | Folder được sửa chính | Việc phải hoàn thành | Port / DB |
 |---|---|---|---|
-| Bạn | `api-gateway`, `ai-service` | Gateway route/CORS/health, AI chat/Ollama, review contract | 8080 / 8090 |
-| Người 1 | `services/identity-service` | Đăng nhập + user/role/permission/session | 8081 / `identity_db` |
-| Người 2 | `services/organization-customer-service` | Organization, branch, employee, customer | 8082 / `organization_customer_db` |
-| Người 3 | `services/inventory-service` | Danh mục, thiết bị, availability, reservation | 8083 / `inventory_db` |
-| Người 4 | `services/rental-service` | Request → quotation → order → contract | 8084 / `rental_db` |
+| Phạm Đình Đức Vượng | `api-gateway`, `services/ai-service` | Gateway route, CORS, health check, AI chat/Ollama và merge các service vào luồng chung | 8080 / 8090 |
+| Tô Trung Tuấn | `services/identity-service`; một phần `services/inventory-service` | Identity: đăng nhập, user, role, permission, session. Inventory: danh mục, master data và CRUD thiết bị | 8081 / `identity_db`; 8083 / `inventory_db` |
+| Trần Minh Tú | Một phần `services/inventory-service` | Availability, reservation, internal equipment query/status; warehouse, nhập/xuất/chuyển kho và kiểm kê | 8083 / `inventory_db` |
+| Bùi Nhật Long | `services/organization-customer-service` | Organization, branch, employee, customer | 8082 / `organization_customer_db` |
+| Phạm Quốc Việt | `services/rental-service` | Rental request → quotation → order → contract | 8084 / `rental_db` |
 
-Không sửa module người khác. Nếu cần thêm endpoint, sửa `docs/SERVICE_OWNERSHIP.md` trong PR rồi nhắn owner Gateway thêm route.
+Không sửa module người khác. Nếu cần thêm endpoint, ghi rõ endpoint, request/response và service sở hữu trong mô tả PR rồi nhắn Phạm Đình Đức Vượng thêm route Gateway.
 
 ## Thứ tự làm để có demo chạy được
 
@@ -26,7 +26,7 @@ Mỗi P0 phải có migration Flyway, controller test và chạy được qua `h
 
 ---
 
-## Người 1 — Identity service
+## Tô Trung Tuấn — Identity service
 
 Nguồn để xem: `../backend/services/identity-service`.
 
@@ -62,7 +62,7 @@ Email verification code, verify email, forgot-password/reset-password public flo
 
 ---
 
-## Người 2 — Organization-Customer service
+## Bùi Nhật Long — Organization-Customer service
 
 Nguồn để xem: `../backend/services/organization-customer-service`.
 
@@ -89,30 +89,37 @@ Giữ các namespace cũ: `/api/v1/organizations/**`; employee/customer nằm d�
 
 ---
 
-## Người 3 — Inventory service
+## Tô Trung Tuấn và Trần Minh Tú — Inventory service
 
 Nguồn để xem: `../backend/services/inventory-service`.
 
+Phân chia trong cùng module để tránh sửa trùng file:
+
+- **Tô Trung Tuấn:** `EquipmentCategoryController`, `EquipmentController`, cùng entity/DTO/service/repository cho danh mục, brand, type, model và thiết bị.
+- **Trần Minh Tú:** `AvailabilityController`, `InternalReservationController`, `EquipmentReservationController`, các internal query/status endpoint, warehouse và nghiệp vụ nhập/xuất/chuyển kho.
+
 ### P0 — bắt buộc để Rental chạy
 
-| Controller cũ | Chức năng cần chuyển |
-|---|---|
-| `EquipmentCategoryController` | CRUD/active category `/api/v1/inventory/categories` |
-| `EquipmentController` | CRUD equipment, filter/list/detail, status, search serial/IMEI/MAC |
-| `AvailabilityController` | API nội bộ kiểm tra availability cho Rental |
-| `InternalReservationController` | Create/confirm/release reservation cho Rental |
-| `EquipmentReservationController` | List/detail reservation để Manager xem |
-| `InternalEquipmentQueryController`, `InternalEquipmentStatusController` | Rental/Operations query và update trạng thái nội bộ |
+| Owner | Controller cũ | Chức năng cần chuyển |
+|---|---|---|
+| Tô Trung Tuấn | `EquipmentCategoryController` | CRUD/active category `/api/v1/inventory/categories` |
+| Tô Trung Tuấn | `EquipmentController` | CRUD equipment, filter/list/detail, status, search serial/IMEI/MAC |
+| Trần Minh Tú | `AvailabilityController` | API nội bộ kiểm tra availability cho Rental |
+| Trần Minh Tú | `InternalReservationController` | Create/confirm/release reservation cho Rental |
+| Trần Minh Tú | `EquipmentReservationController` | List/detail reservation để Manager xem |
+| Trần Minh Tú | `InternalEquipmentQueryController`, `InternalEquipmentStatusController` | Rental/Operations query và update trạng thái nội bộ |
 
 P0 phải quyết định rõ trạng thái thiết bị và rule reserve/release để Rental không giữ chỗ hai lần.
 
 ### P1
 
-`BrandController`, `EquipmentTypeController`, `EquipmentModelController`, `WarehouseController`, `StockInController`, `StockOutController`, `StockTransferController`.
+- **Tô Trung Tuấn:** `BrandController`, `EquipmentTypeController`, `EquipmentModelController`.
+- **Trần Minh Tú:** `WarehouseController`, `StockInController`, `StockOutController`, `StockTransferController`.
 
 ### P2
 
-`EquipmentAccessoryController`, `EquipmentImageController`, `EquipmentQrController`, `EquipmentStatusHistoryController`, `EquipmentTransactionController`, `StockAuditController`, `InternalEquipmentCheckoutController`, `InternalEquipmentCheckinController`.
+- **Tô Trung Tuấn:** `EquipmentAccessoryController`, `EquipmentImageController`, `EquipmentQrController`, `EquipmentStatusHistoryController`.
+- **Trần Minh Tú:** `EquipmentTransactionController`, `StockAuditController`, `InternalEquipmentCheckoutController`, `InternalEquipmentCheckinController`.
 
 Public path vẫn là `/api/v1/inventory/**`. Path `/internal/**` chỉ cho Rental/Operations service, không đi qua public Gateway trừ khi bạn chủ động mở route mới.
 
@@ -120,7 +127,7 @@ Public path vẫn là `/api/v1/inventory/**`. Path `/internal/**` chỉ cho Rent
 
 ---
 
-## Người 4 — Rental service
+## Phạm Quốc Việt — Rental service
 
 Nguồn để xem: `../backend/services/rental-service`.
 
@@ -185,7 +192,7 @@ Khi thêm truy vấn dữ liệu nghiệp vụ cho AI, AI service chỉ gọi AP
 cp .env.example .env
 cd infra && docker compose up -d
 mvn -pl api-gateway spring-boot:run
-mvn -pl ai-service spring-boot:run
+mvn -pl services/ai-service spring-boot:run
 ```
 
-Mỗi service có database riêng được tạo bởi `infra/mysql/init.sql`. Migration đặt trong đúng service: `src/main/resources/db/migration`. Khi bắt đầu viết entity, đổi `spring.flyway.enabled` sang `true`; không dùng `ddl-auto=update` trên môi trường chung.
+Schema cũ của 4 service được giữ tại `infra/mysql/init/01-core-service-schema.sql`; role/permission seed gốc ở `services/identity-service/src/main/resources/security/` và `docs/security/`. Migration đặt trong đúng service: `src/main/resources/db/migration`. Khi bắt đầu viết entity, đổi `spring.flyway.enabled` sang `true`; không dùng `ddl-auto=update` trên môi trường chung.
