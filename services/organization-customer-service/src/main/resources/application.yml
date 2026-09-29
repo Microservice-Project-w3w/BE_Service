@@ -12,6 +12,11 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+security:
+  jwt:
+    issuer: ${JWT_ISSUER:identity-service}
+    secret-base64: ${JWT_SECRET_BASE64:VGhpc0lzTXlTdXBlclNlY3JldEtleUZvckp3dDIwMjQhISE=}
+
 management:
   endpoints.web.exposure.include: health,info
   endpoint.health.show-details: always

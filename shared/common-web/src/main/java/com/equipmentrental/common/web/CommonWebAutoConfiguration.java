@@ -22,7 +22,7 @@ public class CommonWebAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public GlobalExceptionHandler globalExceptionHandler() {
+    public GlobalExceptionHandler commonGlobalExceptionHandler() {
         return new GlobalExceptionHandler();
     }
 }
