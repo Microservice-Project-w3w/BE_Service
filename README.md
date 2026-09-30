@@ -6,7 +6,7 @@
 
 | Người | Folder được sửa chính | Việc phải hoàn thành | Port / DB |
 |---|---|---|---|
-| Phạm Đình Đức Vượng | `api-gateway`, `services/ai-service` | Gateway route, CORS, health check, AI chat/Ollama và merge các service vào luồng chung | 8080 / 8090 |
+| Phạm Đình Đức Vượng | `api-gateway`, project `E:\equipment-rental-AI` | Gateway route, CORS, health check, AI chat/Ollama và merge các service vào luồng chung | 8080 / 8090 |
 | Tô Trung Tuấn | `services/identity-service`; một phần `services/inventory-service` | Identity: đăng nhập, user, role, permission, session. Inventory: danh mục, master data và CRUD thiết bị | 8081 / `identity_db`; 8083 / `inventory_db` |
 | Trần Minh Tú | Một phần `services/inventory-service` | Availability, reservation, internal equipment query/status; warehouse, nhập/xuất/chuyển kho và kiểm kê | 8083 / `inventory_db` |
 | Bùi Nhật Long | `services/organization-customer-service` | Organization, branch, employee, customer | 8082 / `organization_customer_db` |
@@ -174,15 +174,34 @@ curl http://localhost:8080/actuator/health
 
 ### AI service
 
-AI đang có endpoint direct `POST http://localhost:8090/api/v1/chat`, qua Gateway là `POST /api/v1/ai/chat`. Nó gọi Ollama tại `OLLAMA_BASE_URL`; chạy infrastructure AI bằng:
+AI chạy từ project riêng `E:\equipment-rental-AI` (FastAPI), không chạy module Java `services/ai-service` trong repository này vì cả hai đều dùng port `8090`. Endpoint direct là `POST http://localhost:8090/api/v1/chat`; frontend gọi qua Gateway bằng `POST /api/v1/ai/chat`.
+
+AI cần Gateway đang chạy tại `http://localhost:8080` để xác thực token qua Identity và lấy dữ liệu nghiệp vụ. Chỉ role `ADMIN` và `MANAGER` được dùng chat. AI chỉ gọi API qua Gateway, không truy cập trực tiếp database của các service Java.
+
+Chạy trên WSL:
 
 ```bash
-cd infra
-docker compose --profile ai up -d
-ollama pull qwen2.5:7b
+cd /mnt/e/equipment-rental-AI
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e ".[test]"
+python run.py
 ```
 
-Khi thêm truy vấn dữ liệu nghiệp vụ cho AI, AI service chỉ gọi API public/internal đã được duyệt; không dùng database của Identity/Inventory/Rental trực tiếp.
+Thiết lập trong file `E:\equipment-rental-AI\.env`:
+
+```env
+APP_PORT=8090
+API_GATEWAY_BASE_URL=http://localhost:8080
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=viet-tutor-frog
+```
+
+Nếu máy chưa có model đã chọn, tải bằng:
+
+```bash
+ollama pull viet-tutor-frog
+```
 
 ---
 
@@ -192,7 +211,7 @@ Khi thêm truy vấn dữ liệu nghiệp vụ cho AI, AI service chỉ gọi AP
 cp .env.example .env
 cd infra && docker compose up -d
 mvn -pl api-gateway spring-boot:run
-mvn -pl services/ai-service spring-boot:run
+# AI chạy ở terminal khác: cd /mnt/e/equipment-rental-AI && python run.py
 ```
 
 Schema cũ của 4 service được giữ tại `infra/mysql/init/01-core-service-schema.sql`; role/permission seed gốc ở `services/identity-service/src/main/resources/security/` và `docs/security/`. Migration đặt trong đúng service: `src/main/resources/db/migration`. Khi bắt đầu viết entity, đổi `spring.flyway.enabled` sang `true`; không dùng `ddl-auto=update` trên môi trường chung.
