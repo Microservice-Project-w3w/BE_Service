@@ -71,4 +71,21 @@ public class EmployeeBranchAssignmentController {
     // 3. NGỪNG PHÂN CÔNG
     // =====================================================
 
+    @PatchMapping("/{assignmentId}/deactivate")
+    public EmployeeBranchAssignmentResponse deactivate(
+
+            @PathVariable Long organizationId,
+
+            @PathVariable Long assignmentId,
+
+            @RequestParam(required = false)
+            Long actorUserId
+    ) {
+
+        return assignmentService.deactivate(
+                organizationId,
+                assignmentId,
+                actorUserId
+        );
+    }
 }

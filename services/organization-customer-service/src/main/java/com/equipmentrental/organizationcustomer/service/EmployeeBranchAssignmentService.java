@@ -232,6 +232,65 @@ public class EmployeeBranchAssignmentService {
 
 
     // =====================================================
+    // 3. NGỪNG PHÂN CÔNG
+    // =====================================================
+
+    public EmployeeBranchAssignmentResponse deactivate(
+
+            Long organizationId,
+
+            Long assignmentId,
+
+            Long actorUserId
+    ) {
+
+        EmployeeBranchAssignment assignment =
+                assignmentRepository
+                        .findByIdAndOrganizationId(
+                                assignmentId,
+                                organizationId
+                        )
+                        .orElseThrow(
+                                () -> new NotFoundException(
+                                        "Không tìm thấy phân công id = "
+                                                + assignmentId
+                                )
+                        );
+
+
+        assignment.setStatus(
+                AssignmentStatus.INACTIVE
+        );
+
+        assignment.setPrimaryAssignment(
+                false
+        );
+
+
+        if (assignment.getAssignedTo() == null) {
+
+            assignment.setAssignedTo(
+                    LocalDate.now()
+            );
+        }
+
+
+        assignment.setUpdatedBy(
+                actorUserId
+        );
+
+
+        EmployeeBranchAssignment saved =
+                assignmentRepository.save(
+                        assignment
+                );
+
+
+        return toResponse(saved);
+    }
+
+
+    // =====================================================
     // ENTITY -> RESPONSE
     // =====================================================
 
