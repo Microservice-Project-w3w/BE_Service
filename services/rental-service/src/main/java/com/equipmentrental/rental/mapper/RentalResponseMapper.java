@@ -92,7 +92,8 @@ public final class RentalResponseMapper {
                 source.getDiscountCode(),
                 source.getStatus(),
                 source.getValidUntil(),
-                source.getSpecialTerms());
+                source.getSpecialTerms(),
+                source.getRejectionReason());
     }
 
     public static RentalOrderResponse order(RentalOrder source) {
@@ -128,7 +129,8 @@ public final class RentalResponseMapper {
                 source.getApprovedAt(),
                 source.getSignedAt(),
                 source.getLiquidatedAt(),
-                source.getCancelReason());
+                source.getCancelReason(),
+                source.getRejectionReason());
     }
 
     public static ContractAppendixResponse appendix(ContractAppendix source) {
