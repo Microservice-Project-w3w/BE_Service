@@ -34,7 +34,7 @@ public class SessionManagementController {
     @PreAuthorize("hasAuthority('identity.session.revoke')")
     public ApiResponse<Void> revoke(@PathVariable Long userId, @PathVariable Long sessionId,
                                     JwtAuthenticationToken authentication) {
-        sessions.revoke(sessionId, "ADMIN_REVOKED");
+        sessions.revokeForUser(userId, sessionId, "ADMIN_REVOKED");
         auditLogs.record(actor(authentication), "REVOKE_SESSION", "USER_SESSION", sessionId,
                 "{\"userId\":" + userId + "}");
         return ApiResponse.success(null, "Đã thu hồi phiên đăng nhập");
