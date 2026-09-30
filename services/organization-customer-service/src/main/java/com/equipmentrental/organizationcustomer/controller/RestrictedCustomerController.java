@@ -1,0 +1,38 @@
+package com.equipmentrental.organizationcustomer.controller;
+
+import com.equipmentrental.organizationcustomer.dto.request.RestrictedCustomerRequest;
+import com.equipmentrental.organizationcustomer.dto.response.RestrictedCustomerResponse;
+import com.equipmentrental.organizationcustomer.service.RestrictedCustomerService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping(
+        "/api/v1/organizations/{organizationId}/restricted-customers"
+)
+@RequiredArgsConstructor
+public class RestrictedCustomerController {
+
+    private final RestrictedCustomerService service;
+
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public RestrictedCustomerResponse create(
+            @PathVariable Long organizationId,
+            @Valid
+            @RequestBody RestrictedCustomerRequest request
+    ) {
+
+        return service.create(
+                organizationId,
+                request
+        );
+    }
+
+
+}
