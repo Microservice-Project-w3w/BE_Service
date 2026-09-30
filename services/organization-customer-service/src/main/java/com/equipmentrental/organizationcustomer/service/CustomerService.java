@@ -2,6 +2,7 @@ package com.equipmentrental.organizationcustomer.service;
 
 import com.equipmentrental.organizationcustomer.dto.request.CustomerRequest;
 import com.equipmentrental.organizationcustomer.dto.response.CustomerResponse;
+import com.equipmentrental.organizationcustomer.dto.response.OwnershipResponse;
 import com.equipmentrental.organizationcustomer.entity.Customer;
 import com.equipmentrental.organizationcustomer.enums.CustomerStatus;
 import com.equipmentrental.organizationcustomer.enums.CustomerType;
@@ -572,6 +573,46 @@ public class CustomerService {
 
 
         customerRepository.save(customer);
+    }
+
+
+    // =====================================================
+    // 6. KIỂM TRA OWN
+    // =====================================================
+
+    @Transactional(readOnly = true)
+    public OwnershipResponse checkOwnership(
+
+            Long organizationId,
+
+            Long customerId,
+
+            Long userId
+    ) {
+
+        Customer customer =
+                getEntity(
+                        organizationId,
+                        customerId
+                );
+
+
+        boolean owned =
+                userId != null
+                        && customer.getOwnerUserId() != null
+                        && customer
+                        .getOwnerUserId()
+                        .equals(userId);
+
+
+        return new OwnershipResponse(
+
+                customerId,
+
+                userId,
+
+                owned
+        );
     }
 
 

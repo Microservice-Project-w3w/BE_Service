@@ -2,6 +2,7 @@ package com.equipmentrental.organizationcustomer.controller;
 
 import com.equipmentrental.organizationcustomer.dto.request.CustomerRequest;
 import com.equipmentrental.organizationcustomer.dto.response.CustomerResponse;
+import com.equipmentrental.organizationcustomer.dto.response.OwnershipResponse;
 import com.equipmentrental.organizationcustomer.enums.CustomerType;
 import com.equipmentrental.organizationcustomer.service.CustomerService;
 import jakarta.validation.Valid;
@@ -167,4 +168,20 @@ public class CustomerController {
     // /customers/{customerId}/ownership?userId=10
     // =====================================================
 
+    @GetMapping("/{customerId}/ownership")
+    public OwnershipResponse checkOwnership(
+
+            @PathVariable Long organizationId,
+
+            @PathVariable Long customerId,
+
+            @RequestParam Long userId
+    ) {
+
+        return customerService.checkOwnership(
+                organizationId,
+                customerId,
+                userId
+        );
+    }
 }
