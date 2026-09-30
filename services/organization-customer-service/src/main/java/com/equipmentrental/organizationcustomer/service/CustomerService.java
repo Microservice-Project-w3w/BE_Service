@@ -1,0 +1,334 @@
+package com.equipmentrental.organizationcustomer.service;
+
+import com.equipmentrental.organizationcustomer.dto.request.CustomerRequest;
+import com.equipmentrental.organizationcustomer.dto.response.CustomerResponse;
+import com.equipmentrental.organizationcustomer.entity.Customer;
+import com.equipmentrental.organizationcustomer.enums.CustomerStatus;
+import com.equipmentrental.organizationcustomer.enums.CustomerType;
+import com.equipmentrental.organizationcustomer.exception.BadRequestException;
+import com.equipmentrental.organizationcustomer.exception.ConflictException;
+import com.equipmentrental.organizationcustomer.exception.NotFoundException;
+import com.equipmentrental.organizationcustomer.repository.CustomerRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+@Transactional
+public class CustomerService {
+
+    private final CustomerRepository customerRepository;
+
+    private final OrganizationService organizationService;
+
+    private final BranchService branchService;
+
+
+    // =====================================================
+    // 1. TẠO KHÁCH HÀNG
+    // =====================================================
+
+    public CustomerResponse create(
+            Long organizationId,
+            CustomerRequest request
+    ) {
+
+        // Doanh nghiệp phải tồn tại
+        organizationService.getEntity(
+                organizationId
+        );
+
+        // Nếu có branchId thì branch phải thuộc organization này
+        validateBranch(
+                organizationId,
+                request.branchId()
+        );
+
+        // Validate theo loại khách hàng
+        validateCustomerType(request);
+
+        // Không cho trùng customerCode trong cùng doanh nghiệp
+        if (customerRepository
+                .existsByOrganizationIdAndCustomerCodeAndDeletedAtIsNull(
+                        organizationId,
+                        request.customerCode()
+                )) {
+
+            throw new ConflictException(
+                    "Mã khách hàng đã tồn tại trong doanh nghiệp"
+            );
+        }
+
+
+        Customer customer = Customer.builder()
+
+                .organizationId(
+                        organizationId
+                )
+
+                .branchId(
+                        request.branchId()
+                )
+
+                .ownerUserId(
+                        request.ownerUserId()
+                )
+
+                .customerCode(
+                        request.customerCode().trim()
+                )
+
+                .customerType(
+                        request.customerType()
+                )
+
+                .displayName(
+                        request.displayName().trim()
+                )
+
+                .email(
+                        clean(request.email())
+                )
+
+                .phone(
+                        clean(request.phone())
+                )
+
+                .address(
+                        clean(request.address())
+                )
+
+                // Cá nhân
+                .fullName(
+                        request.customerType()
+                                == CustomerType.INDIVIDUAL
+                                ? clean(request.fullName())
+                                : null
+                )
+
+                .dateOfBirth(
+                        request.customerType()
+                                == CustomerType.INDIVIDUAL
+                                ? request.dateOfBirth()
+                                : null
+                )
+
+                .identityNumber(
+                        request.customerType()
+                                == CustomerType.INDIVIDUAL
+                                ? clean(request.identityNumber())
+                                : null
+                )
+
+                // Doanh nghiệp
+                .companyName(
+                        request.customerType()
+                                == CustomerType.BUSINESS
+                                ? clean(request.companyName())
+                                : null
+                )
+
+                .taxCode(
+                        request.customerType()
+                                == CustomerType.BUSINESS
+                                ? clean(request.taxCode())
+                                : null
+                )
+
+                .representativeName(
+                        request.customerType()
+                                == CustomerType.BUSINESS
+                                ? clean(request.representativeName())
+                                : null
+                )
+
+                .representativePhone(
+                        request.customerType()
+                                == CustomerType.BUSINESS
+                                ? clean(request.representativePhone())
+                                : null
+                )
+
+                .representativeEmail(
+                        request.customerType()
+                                == CustomerType.BUSINESS
+                                ? clean(request.representativeEmail())
+                                : null
+                )
+
+                .status(
+                        request.status() == null
+                                ? CustomerStatus.ACTIVE
+                                : request.status()
+                )
+
+                .note(
+                        clean(request.note())
+                )
+
+                .createdBy(
+                        request.actorUserId()
+                )
+
+                .updatedBy(
+                        request.actorUserId()
+                )
+
+                .build();
+
+
+        Customer saved =
+                customerRepository.save(customer);
+
+        return toResponse(saved);
+    }
+
+
+    // =====================================================
+    // 8. KIỂM TRA BRANCH
+    // =====================================================
+
+    private void validateBranch(
+
+            Long organizationId,
+
+            Long branchId
+    ) {
+
+        if (branchId == null) {
+            return;
+        }
+
+
+        /*
+         * Đây là điểm quan trọng của multi-tenant:
+         *
+         * Customer thuộc Organization 1
+         * không được trỏ tới Branch của Organization 2.
+         */
+        branchService.getEntity(
+                organizationId,
+                branchId
+        );
+    }
+
+
+    // =====================================================
+    // 9. VALIDATE INDIVIDUAL / BUSINESS
+    // =====================================================
+
+    private void validateCustomerType(
+            CustomerRequest request
+    ) {
+
+        if (request.customerType()
+                == CustomerType.INDIVIDUAL) {
+
+            if (request.fullName() == null
+                    || request.fullName().isBlank()) {
+
+                throw new BadRequestException(
+                        "Khách hàng cá nhân phải có fullName"
+                );
+            }
+        }
+
+
+        if (request.customerType()
+                == CustomerType.BUSINESS) {
+
+            if (request.companyName() == null
+                    || request.companyName().isBlank()) {
+
+                throw new BadRequestException(
+                        "Khách hàng doanh nghiệp phải có companyName"
+                );
+            }
+        }
+    }
+
+
+    // =====================================================
+    // 10. ENTITY -> RESPONSE
+    // =====================================================
+
+    private CustomerResponse toResponse(
+            Customer customer
+    ) {
+
+        return new CustomerResponse(
+
+                customer.getId(),
+
+                customer.getOrganizationId(),
+
+                customer.getBranchId(),
+
+                customer.getOwnerUserId(),
+
+                customer.getCustomerCode(),
+
+                customer.getCustomerType(),
+
+                customer.getDisplayName(),
+
+                customer.getEmail(),
+
+                customer.getPhone(),
+
+                customer.getAddress(),
+
+                // Cá nhân
+                customer.getFullName(),
+
+                customer.getDateOfBirth(),
+
+                customer.getIdentityNumber(),
+
+                // Doanh nghiệp
+                customer.getCompanyName(),
+
+                customer.getTaxCode(),
+
+                customer.getRepresentativeName(),
+
+                customer.getRepresentativePhone(),
+
+                customer.getRepresentativeEmail(),
+
+                customer.getStatus(),
+
+                customer.getNote(),
+
+                customer.getCreatedBy(),
+
+                customer.getUpdatedBy(),
+
+                customer.getCreatedAt(),
+
+                customer.getUpdatedAt()
+        );
+    }
+
+
+    // =====================================================
+    // 11. STRING RỖNG -> NULL
+    // =====================================================
+
+    private String clean(
+            String value
+    ) {
+
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        return value.trim();
+    }
+}
