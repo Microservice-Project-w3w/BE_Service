@@ -23,13 +23,15 @@ public class IdentityManagementService {
     private final RoleRepository roles;
     private final PasswordEncoder passwordEncoder;
     private final SessionService sessions;
+    private final AuditLogService auditLogs;
 
     public IdentityManagementService(UserRepository users, RoleRepository roles,
-            PasswordEncoder passwordEncoder, SessionService sessions) {
+            PasswordEncoder passwordEncoder, SessionService sessions, AuditLogService auditLogs) {
         this.users = users;
         this.roles = roles;
         this.passwordEncoder = passwordEncoder;
         this.sessions = sessions;
+        this.auditLogs = auditLogs;
     }
 
     @Transactional(readOnly = true)
@@ -57,7 +59,9 @@ public class IdentityManagementService {
         user.setFailedLoginAttempts(0);
         user.setCreatedBy(user(actorUserId));
         user.setUpdatedBy(user(actorUserId));
-        return toResponse(users.save(user));
+        User saved = users.save(user);
+        auditLogs.record(actorUserId, "CREATE_ACCOUNT", "USER", saved.getId(), "{\"email\":\"" + email + "\"}");
+        return toResponse(saved);
     }
 
     public UserResponse updateRole(Long id, String roleCode, Long actorUserId) {
@@ -65,7 +69,9 @@ public class IdentityManagementService {
         user.setRole(role(roleCode));
         user.setUpdatedBy(user(actorUserId));
         sessions.revokeAllForUser(id, "ROLE_CHANGED");
-        return toResponse(users.save(user));
+        User saved = users.save(user);
+        auditLogs.record(actorUserId, "CHANGE_ROLE", "USER", id, "{\"roleCode\":\"" + user.getRole().getCode() + "\"}");
+        return toResponse(saved);
     }
 
     public UserResponse lock(Long id, Long actorUserId) {
@@ -74,7 +80,9 @@ public class IdentityManagementService {
         user.setLockedUntil(null);
         user.setUpdatedBy(user(actorUserId));
         sessions.revokeAllForUser(id, "ADMIN_LOCKED");
-        return toResponse(users.save(user));
+        User saved = users.save(user);
+        auditLogs.record(actorUserId, "LOCK_ACCOUNT", "USER", id, "{}");
+        return toResponse(saved);
     }
 
     public UserResponse unlock(Long id, Long actorUserId) {
@@ -83,7 +91,9 @@ public class IdentityManagementService {
         user.setLockedUntil(null);
         user.setFailedLoginAttempts(0);
         user.setUpdatedBy(user(actorUserId));
-        return toResponse(users.save(user));
+        User saved = users.save(user);
+        auditLogs.record(actorUserId, "UNLOCK_ACCOUNT", "USER", id, "{}");
+        return toResponse(saved);
     }
 
     public void resetPassword(Long id, String newPassword, Long actorUserId) {
@@ -94,6 +104,7 @@ public class IdentityManagementService {
         user.setUpdatedBy(user(actorUserId));
         users.save(user);
         sessions.revokeAllForUser(id, "ADMIN_PASSWORD_RESET");
+        auditLogs.record(actorUserId, "RESET_PASSWORD", "USER", id, "{}");
     }
 
     public void softDelete(Long id, Long actorUserId) {
@@ -105,6 +116,7 @@ public class IdentityManagementService {
         user.setUpdatedBy(user(actorUserId));
         sessions.revokeAllForUser(id, "ADMIN_DELETED");
         users.save(user);
+        auditLogs.record(actorUserId, "DELETE_ACCOUNT", "USER", id, "{}");
     }
 
     private User user(Long id) {
