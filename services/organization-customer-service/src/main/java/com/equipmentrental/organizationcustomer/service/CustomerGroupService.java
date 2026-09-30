@@ -162,6 +162,33 @@ public class CustomerGroupService {
     }
 
 
+    // =====================================================
+    // 5. XÓA MỀM NHÓM
+    // =====================================================
+
+    public void delete(
+            Long organizationId,
+            Long groupId,
+            Long actorUserId
+    ) {
+
+        CustomerGroup group =
+                getEntity(organizationId, groupId);
+
+        group.setStatus(
+                CustomerGroupStatus.DELETED
+        );
+
+        group.setDeletedAt(
+                LocalDateTime.now()
+        );
+
+        group.setUpdatedBy(actorUserId);
+
+        groupRepository.save(group);
+    }
+
+
 
     public CustomerGroup getEntity(
             Long organizationId,

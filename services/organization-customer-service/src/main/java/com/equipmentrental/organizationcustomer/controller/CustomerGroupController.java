@@ -73,4 +73,25 @@ public class CustomerGroupController {
     }
 
 
+    @DeleteMapping("/{groupId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(
+            @PathVariable Long organizationId,
+            @PathVariable Long groupId,
+            @RequestParam(required = false)
+            Long actorUserId
+    ) {
+
+        groupService.delete(
+                organizationId,
+                groupId,
+                actorUserId
+        );
+    }
+
+
+    // =====================================================
+    // THÀNH VIÊN NHÓM
+    // =====================================================
+
 }
