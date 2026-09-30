@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalDateTime;
 @Repository
 public interface EquipmentReservationRepository
         extends JpaRepository<EquipmentReservation, Long> {
@@ -32,4 +33,6 @@ public interface EquipmentReservationRepository
             Long organizationId,
             String requestReference
     );
+
+    List<EquipmentReservation> findByStatusAndExpiresAtBefore(ReservationStatus status, LocalDateTime expiresAt);
 }
