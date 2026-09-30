@@ -72,6 +72,27 @@ public class CustomerGroupService {
     }
 
 
+    // =====================================================
+    // 2. DANH SÁCH NHÓM
+    // =====================================================
+
+    @Transactional(readOnly = true)
+    public List<CustomerGroupResponse> getAll(
+            Long organizationId
+    ) {
+
+        organizationService.getEntity(organizationId);
+
+        return groupRepository
+                .findAllByOrganizationIdAndDeletedAtIsNullOrderByIdDesc(
+                        organizationId
+                )
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+
     private CustomerGroupResponse toResponse(
             CustomerGroup group
     ) {

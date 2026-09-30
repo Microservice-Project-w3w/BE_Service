@@ -34,4 +34,15 @@ public class CustomerGroupController {
     }
 
 
+    @GetMapping
+    public List<CustomerGroupResponse> getAll(
+            @PathVariable Long organizationId
+    ) {
+
+        return groupService.getAll(
+                organizationId
+        );
+    }
+
+
 }
