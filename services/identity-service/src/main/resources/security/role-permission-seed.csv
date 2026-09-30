@@ -264,3 +264,10 @@ CUSTOMER,billing.invoice.read,OWN
 CUSTOMER,billing.payment.read,OWN
 CUSTOMER,maintenance.incident.create,OWN
 CUSTOMER,maintenance.incident.read,OWN
+MANAGER,customer.group.manage,BRANCH
+MANAGER,customer.profile.create,BRANCH
+MANAGER,customer.profile.update,BRANCH
+MANAGER,customer.restriction.manage,BRANCH
+OPERATIONS_STAFF,inventory.brand.manage,BRANCH
+OPERATIONS_STAFF,inventory.catalog.manage,BRANCH
+OPERATIONS_STAFF,inventory.model.manage,BRANCH

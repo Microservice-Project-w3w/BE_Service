@@ -16,6 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 import java.util.List;
 import java.util.Optional;
 
@@ -98,5 +99,20 @@ class BranchServiceTest {
                 .thenReturn(true);
         var request = new BranchRequest("BR-02", "Main", null, null, null, null, null);
         assertThatThrownBy(() -> branchService.update(1L, 2L, request)).isInstanceOf(ConflictException.class);
+    }
+
+    @Test
+    void deleteSoftDeletesBranchWithinOrganization() {
+        Branch branch = Branch.builder().id(2L).organizationId(1L).branchCode("BR-01")
+                .branchName("Main").status(BranchStatus.ACTIVE).build();
+        when(branchRepository.findByIdAndOrganizationIdAndDeletedAtIsNull(2L, 1L))
+                .thenReturn(Optional.of(branch));
+
+        branchService.delete(1L, 2L, 7L);
+
+        assertThat(branch.getStatus()).isEqualTo(BranchStatus.DELETED);
+        assertThat(branch.getDeletedAt()).isNotNull();
+        assertThat(branch.getUpdatedBy()).isEqualTo(7L);
+        verify(branchRepository).save(branch);
     }
 }

@@ -12,6 +12,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -78,6 +79,14 @@ public class BranchService {
         } catch (DataIntegrityViolationException exception) {
             throw new ConflictException("Mã chi nhánh đã tồn tại trong doanh nghiệp");
         }
+    }
+
+    public void delete(Long organizationId, Long branchId, Long actorUserId) {
+        Branch branch = getEntity(organizationId, branchId);
+        branch.setStatus(BranchStatus.DELETED);
+        branch.setDeletedAt(LocalDateTime.now());
+        branch.setUpdatedBy(actorUserId);
+        branchRepository.save(branch);
     }
 
     private BranchResponse toResponse(Branch branch) {

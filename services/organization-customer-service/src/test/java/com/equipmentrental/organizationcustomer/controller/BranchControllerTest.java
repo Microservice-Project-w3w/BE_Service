@@ -15,6 +15,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -69,5 +70,13 @@ class BranchControllerTest {
                         .content("{\"branchCode\":\"BR-01\",\"branchName\":\"Main Updated\",\"actorUserId\":7}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.branchName").value("Main Updated"));
+    }
+
+    @Test
+    void deleteReturns204() throws Exception {
+        mockMvc.perform(delete("/api/v1/organizations/1/branches/2")
+                        .param("actorUserId", "7"))
+                .andExpect(status().isNoContent());
+        org.mockito.Mockito.verify(branchService).delete(1L, 2L, 7L);
     }
 }
