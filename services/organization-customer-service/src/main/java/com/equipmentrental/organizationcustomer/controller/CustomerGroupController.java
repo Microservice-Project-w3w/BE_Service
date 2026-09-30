@@ -58,4 +58,19 @@ public class CustomerGroupController {
     }
 
 
+    @PutMapping("/{groupId}")
+    public CustomerGroupResponse update(
+            @PathVariable Long organizationId,
+            @PathVariable Long groupId,
+            @Valid @RequestBody CustomerGroupRequest request
+    ) {
+
+        return groupService.update(
+                organizationId,
+                groupId,
+                request
+        );
+    }
+
+
 }

@@ -109,6 +109,59 @@ public class CustomerGroupService {
     }
 
 
+    // =====================================================
+    // 4. CẬP NHẬT NHÓM
+    // =====================================================
+
+    public CustomerGroupResponse update(
+            Long organizationId,
+            Long groupId,
+            CustomerGroupRequest request
+    ) {
+
+        CustomerGroup group =
+                getEntity(organizationId, groupId);
+
+        if (!group.getGroupCode()
+                .equals(request.groupCode())
+
+                && groupRepository
+                .existsByOrganizationIdAndGroupCodeAndDeletedAtIsNull(
+                        organizationId,
+                        request.groupCode()
+                )) {
+
+            throw new ConflictException(
+                    "Mã nhóm khách hàng đã tồn tại"
+            );
+        }
+
+        group.setGroupCode(
+                request.groupCode().trim()
+        );
+
+        group.setGroupName(
+                request.groupName().trim()
+        );
+
+        group.setDescription(
+                clean(request.description())
+        );
+
+        if (request.status() != null) {
+            group.setStatus(request.status());
+        }
+
+        group.setUpdatedBy(
+                request.actorUserId()
+        );
+
+        return toResponse(
+                groupRepository.save(group)
+        );
+    }
+
+
 
     public CustomerGroup getEntity(
             Long organizationId,
