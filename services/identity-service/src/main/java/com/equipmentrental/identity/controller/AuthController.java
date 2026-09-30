@@ -11,7 +11,7 @@ import com.equipmentrental.identity.dto.auth.ChangePasswordRequest;
 import com.equipmentrental.identity.dto.auth.ResetPasswordRequest;
 import com.equipmentrental.identity.dto.auth.ConfirmResetPasswordRequest;
 import com.equipmentrental.identity.service.AuthService;
-import com.equipmentrental.common.web.ApiResponse;
+import com.equipmentrental.identity.dto.response.ApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

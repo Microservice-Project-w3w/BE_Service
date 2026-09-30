@@ -1,6 +1,6 @@
 package com.equipmentrental.identity.config;
 
-import com.equipmentrental.common.security.DataScope;
+import com.equipmentrental.identity.security.DataScope;
 import com.equipmentrental.identity.entity.Permission;
 import com.equipmentrental.identity.entity.Role;
 import com.equipmentrental.identity.entity.RolePermission;

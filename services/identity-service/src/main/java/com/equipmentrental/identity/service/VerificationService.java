@@ -1,7 +1,6 @@
 package com.equipmentrental.identity.service;
 
-import com.equipmentrental.common.web.BusinessException;
-import com.equipmentrental.common.web.CommonErrorCode;
+import com.equipmentrental.identity.exception.IdentityException;
 import com.equipmentrental.identity.entity.User;
 import com.equipmentrental.identity.entity.VerificationCode;
 import com.equipmentrental.identity.repository.VerificationCodeRepository;
@@ -40,17 +39,27 @@ public class VerificationService {
 
     public User verify(String email, String purpose, String code) {
         VerificationCode verification = repository.findFirstByEmailAndPurposeAndUsedAtIsNullOrderByCreatedAtDesc(email, purpose)
-                .orElseThrow(() -> new BusinessException(CommonErrorCode.AUTH_TOKEN_INVALID, "Mã xác minh không tồn tại"));
+            .orElseThrow(() ->
+                new IdentityException(
+                    "Mã xác minh không tồn tại"
+                )
+            );
         if (!verification.canUse()) {
-            throw new BusinessException(CommonErrorCode.AUTH_TOKEN_EXPIRED, "Mã xác minh đã hết hạn hoặc vượt quá số lần thử");
+            throw new IdentityException(
+                "Mã xác minh đã hết hạn hoặc vượt quá số lần thử"
+            );
         }
         if (!passwordEncoder.matches(code, verification.getCodeHash())) {
             verification.recordAttempt();
-            throw new BusinessException(CommonErrorCode.AUTH_TOKEN_INVALID, "Mã xác minh không chính xác");
+            throw new IdentityException(
+                "Mã xác minh không chính xác"
+            );
         }
         verification.markUsed();
         if (verification.getUser() == null) {
-            throw new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND, "Không tìm thấy tài khoản xác minh");
+            throw new IdentityException(
+                "Không tìm thấy tài khoản xác minh"
+            );
         }
         return verification.getUser();
     }
