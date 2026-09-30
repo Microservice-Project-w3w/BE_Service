@@ -139,4 +139,32 @@ public class CustomerController {
     // /api/v1/organizations/{organizationId}/customers/{customerId}
     // =====================================================
 
+    @DeleteMapping("/{customerId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(
+
+            @PathVariable Long organizationId,
+
+            @PathVariable Long customerId,
+
+            @RequestParam(required = false)
+            Long actorUserId
+    ) {
+
+        customerService.delete(
+                organizationId,
+                customerId,
+                actorUserId
+        );
+    }
+
+
+    // =====================================================
+    // 6. KIỂM TRA OWN
+    //
+    // GET
+    // /api/v1/organizations/{organizationId}
+    // /customers/{customerId}/ownership?userId=10
+    // =====================================================
+
 }

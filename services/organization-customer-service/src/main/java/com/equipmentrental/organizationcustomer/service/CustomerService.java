@@ -539,6 +539,43 @@ public class CustomerService {
 
 
     // =====================================================
+    // 5. XÓA MỀM KHÁCH HÀNG
+    // =====================================================
+
+    public void delete(
+
+            Long organizationId,
+
+            Long customerId,
+
+            Long actorUserId
+    ) {
+
+        Customer customer =
+                getEntity(
+                        organizationId,
+                        customerId
+                );
+
+
+        customer.setStatus(
+                CustomerStatus.DELETED
+        );
+
+        customer.setDeletedAt(
+                LocalDateTime.now()
+        );
+
+        customer.setUpdatedBy(
+                actorUserId
+        );
+
+
+        customerRepository.save(customer);
+    }
+
+
+    // =====================================================
     // 7. LẤY CUSTOMER ENTITY NỘI BỘ
     // =====================================================
 
