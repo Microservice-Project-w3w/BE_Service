@@ -27,6 +27,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -263,7 +265,14 @@ public class RentalWorkflowService {
         if (o.getStatus() != OrderStatus.PENDING) throw ApiException.invalidStatus("Chỉ giữ chỗ đơn PENDING");
         if (!r.reservedUntil().isAfter(LocalDateTime.now()))
             throw new ApiException("Thời hạn giữ chỗ phải ở tương lai");
-        String reservationId = inventoryClient.createReservation(o, r.reservedUntil(), r.equipmentIds());
+        List<Long> equipmentIds = r.equipmentIds() == null ? List.of() : r.equipmentIds();
+        if (equipmentIds.isEmpty()) {
+            equipmentIds = allocateAvailableEquipment(o);
+        }
+        if (equipmentIds.isEmpty()) {
+            throw new ApiException("Không có thiết bị khả dụng để giữ chỗ");
+        }
+        String reservationId = inventoryClient.createReservation(o, r.reservedUntil(), equipmentIds);
         o.setInventoryReservationId(reservationId);
         o.setReservedUntil(r.reservedUntil());
         o.setStatus(OrderStatus.RESERVED);
@@ -302,6 +311,26 @@ public class RentalWorkflowService {
     @Transactional(readOnly = true)
     public RentalOrderResponse getOrder(Long id) {
         return RentalResponseMapper.order(findOrder(id));
+    }
+
+    private List<Long> allocateAvailableEquipment(RentalOrder order) {
+        Quotation quotation = findQuotation(order.getQuotationId());
+        RentalRequest request = findRequest(quotation.getRentalRequestId());
+        LinkedHashSet<Long> selected = new LinkedHashSet<>();
+        for (RentalRequestItem item : request.getItems()) {
+            JsonNode availability = inventoryClient.availability(order.getOrganizationId(), order.getBranchId(),
+                    item.getEquipmentTypeId(), order.getStartAt(), order.getEndAt(), item.getQuantity());
+            if (!availability.path("available").asBoolean(false)) {
+                throw new ApiException("Không đủ thiết bị khả dụng cho loại thiết bị " + item.getEquipmentTypeId());
+            }
+            List<Long> candidates = new ArrayList<>();
+            availability.path("equipmentIds").forEach(value -> candidates.add(value.asLong()));
+            if (candidates.size() < item.getQuantity()) {
+                throw new ApiException("Inventory trả thiếu thiết bị cho loại thiết bị " + item.getEquipmentTypeId());
+            }
+            selected.addAll(candidates.subList(0, item.getQuantity()));
+        }
+        return List.copyOf(selected);
     }
 
     private RentalRequest findRequest(Long id) {
