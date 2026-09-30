@@ -93,6 +93,42 @@ public class CustomerGroupService {
     }
 
 
+    // =====================================================
+    // 3. CHI TIẾT NHÓM
+    // =====================================================
+
+    @Transactional(readOnly = true)
+    public CustomerGroupResponse getById(
+            Long organizationId,
+            Long groupId
+    ) {
+
+        return toResponse(
+                getEntity(organizationId, groupId)
+        );
+    }
+
+
+
+    public CustomerGroup getEntity(
+            Long organizationId,
+            Long groupId
+    ) {
+
+        return groupRepository
+                .findByIdAndOrganizationIdAndDeletedAtIsNull(
+                        groupId,
+                        organizationId
+                )
+                .orElseThrow(
+                        () -> new NotFoundException(
+                                "Không tìm thấy nhóm khách hàng id = "
+                                        + groupId
+                        )
+                );
+    }
+
+
     private CustomerGroupResponse toResponse(
             CustomerGroup group
     ) {

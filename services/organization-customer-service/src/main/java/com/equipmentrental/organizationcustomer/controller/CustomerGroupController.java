@@ -45,4 +45,17 @@ public class CustomerGroupController {
     }
 
 
+    @GetMapping("/{groupId}")
+    public CustomerGroupResponse getById(
+            @PathVariable Long organizationId,
+            @PathVariable Long groupId
+    ) {
+
+        return groupService.getById(
+                organizationId,
+                groupId
+        );
+    }
+
+
 }
