@@ -272,6 +272,9 @@ public class RentalWorkflowService {
         if (equipmentIds.isEmpty()) {
             throw new ApiException("Không có thiết bị khả dụng để giữ chỗ");
         }
+        if (new LinkedHashSet<>(equipmentIds).size() != equipmentIds.size()) {
+            throw new ApiException("Danh sách thiết bị giữ chỗ không được chứa ID trùng lặp");
+        }
         String reservationId = inventoryClient.createReservation(o, r.reservedUntil(), equipmentIds);
         o.setInventoryReservationId(reservationId);
         o.setReservedUntil(r.reservedUntil());
