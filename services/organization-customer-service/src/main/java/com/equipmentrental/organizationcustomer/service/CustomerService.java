@@ -368,6 +368,177 @@ public class CustomerService {
 
 
     // =====================================================
+    // 4. CẬP NHẬT KHÁCH HÀNG
+    // =====================================================
+
+    public CustomerResponse update(
+
+            Long organizationId,
+
+            Long customerId,
+
+            CustomerRequest request
+    ) {
+
+        Customer customer =
+                getEntity(
+                        organizationId,
+                        customerId
+                );
+
+
+        validateBranch(
+                organizationId,
+                request.branchId()
+        );
+
+
+        validateCustomerType(request);
+
+
+        /*
+         * Nếu customerCode thay đổi,
+         * kiểm tra mã mới có bị trùng không.
+         */
+        if (!customer
+                .getCustomerCode()
+                .equals(request.customerCode())
+
+                && customerRepository
+                .existsByOrganizationIdAndCustomerCodeAndDeletedAtIsNull(
+                        organizationId,
+                        request.customerCode()
+                )) {
+
+            throw new ConflictException(
+                    "Mã khách hàng đã tồn tại trong doanh nghiệp"
+            );
+        }
+
+
+        customer.setBranchId(
+                request.branchId()
+        );
+
+        customer.setOwnerUserId(
+                request.ownerUserId()
+        );
+
+        customer.setCustomerCode(
+                request.customerCode().trim()
+        );
+
+        customer.setCustomerType(
+                request.customerType()
+        );
+
+        customer.setDisplayName(
+                request.displayName().trim()
+        );
+
+        customer.setEmail(
+                clean(request.email())
+        );
+
+        customer.setPhone(
+                clean(request.phone())
+        );
+
+        customer.setAddress(
+                clean(request.address())
+        );
+
+
+        // =================================================
+        // Nếu chuyển thành khách cá nhân
+        // =================================================
+
+        if (request.customerType()
+                == CustomerType.INDIVIDUAL) {
+
+            customer.setFullName(
+                    clean(request.fullName())
+            );
+
+            customer.setDateOfBirth(
+                    request.dateOfBirth()
+            );
+
+            customer.setIdentityNumber(
+                    clean(request.identityNumber())
+            );
+
+
+            // Xóa dữ liệu doanh nghiệp cũ
+            customer.setCompanyName(null);
+            customer.setTaxCode(null);
+            customer.setRepresentativeName(null);
+            customer.setRepresentativePhone(null);
+            customer.setRepresentativeEmail(null);
+        }
+
+
+        // =================================================
+        // Nếu chuyển thành khách doanh nghiệp
+        // =================================================
+
+        if (request.customerType()
+                == CustomerType.BUSINESS) {
+
+            customer.setCompanyName(
+                    clean(request.companyName())
+            );
+
+            customer.setTaxCode(
+                    clean(request.taxCode())
+            );
+
+            customer.setRepresentativeName(
+                    clean(request.representativeName())
+            );
+
+            customer.setRepresentativePhone(
+                    clean(request.representativePhone())
+            );
+
+            customer.setRepresentativeEmail(
+                    clean(request.representativeEmail())
+            );
+
+
+            // Xóa dữ liệu cá nhân cũ
+            customer.setFullName(null);
+            customer.setDateOfBirth(null);
+            customer.setIdentityNumber(null);
+        }
+
+
+        if (request.status() != null) {
+
+            customer.setStatus(
+                    request.status()
+            );
+        }
+
+
+        customer.setNote(
+                clean(request.note())
+        );
+
+
+        customer.setUpdatedBy(
+                request.actorUserId()
+        );
+
+
+        Customer saved =
+                customerRepository.save(customer);
+
+        return toResponse(saved);
+    }
+
+
+    // =====================================================
     // 7. LẤY CUSTOMER ENTITY NỘI BỘ
     // =====================================================
 

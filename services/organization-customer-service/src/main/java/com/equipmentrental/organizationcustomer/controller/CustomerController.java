@@ -113,4 +113,30 @@ public class CustomerController {
     // /api/v1/organizations/{organizationId}/customers/{customerId}
     // =====================================================
 
+    @PutMapping("/{customerId}")
+    public CustomerResponse update(
+
+            @PathVariable Long organizationId,
+
+            @PathVariable Long customerId,
+
+            @Valid
+            @RequestBody CustomerRequest request
+    ) {
+
+        return customerService.update(
+                organizationId,
+                customerId,
+                request
+        );
+    }
+
+
+    // =====================================================
+    // 5. XÓA MỀM KHÁCH HÀNG
+    //
+    // DELETE
+    // /api/v1/organizations/{organizationId}/customers/{customerId}
+    // =====================================================
+
 }
