@@ -1,16 +1,32 @@
 server:
   port: ${SERVER_PORT:8083}
+
 spring:
-  application.name: inventory-service
+  application:
+    name: inventory-service
+
   datasource:
     url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/inventory_db?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=utf8
     username: ${MYSQL_USER:root}
     password: ${MYSQL_PASSWORD:${MYSQL_ROOT_PASSWORD:change-me}}
+
   jpa:
-    hibernate.ddl-auto: validate
+    hibernate:
+      ddl-auto: validate
     open-in-view: false
+
   flyway:
-    enabled: false
+    enabled: true
+
 management:
-  endpoints.web.exposure.include: health,info
-  endpoint.health.show-details: always
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+security:
+  jwt:
+    secret-base64: ${JWT_SECRET_BASE64}
