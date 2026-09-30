@@ -2,6 +2,7 @@ package com.equipmentrental.organizationcustomer.controller;
 
 import com.equipmentrental.organizationcustomer.dto.request.RestrictedCustomerRequest;
 import com.equipmentrental.organizationcustomer.dto.response.RestrictedCustomerResponse;
+import com.equipmentrental.organizationcustomer.dto.response.RestrictionCheckResponse;
 import com.equipmentrental.organizationcustomer.service.RestrictedCustomerService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +44,19 @@ public class RestrictedCustomerController {
     ) {
 
         return service.getAll(
+                organizationId,
+                customerId
+        );
+    }
+
+
+    @GetMapping("/check/{customerId}")
+    public RestrictionCheckResponse check(
+            @PathVariable Long organizationId,
+            @PathVariable Long customerId
+    ) {
+
+        return service.check(
                 organizationId,
                 customerId
         );

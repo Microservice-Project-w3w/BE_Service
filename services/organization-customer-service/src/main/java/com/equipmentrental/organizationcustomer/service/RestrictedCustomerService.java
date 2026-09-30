@@ -2,6 +2,7 @@ package com.equipmentrental.organizationcustomer.service;
 
 import com.equipmentrental.organizationcustomer.dto.request.RestrictedCustomerRequest;
 import com.equipmentrental.organizationcustomer.dto.response.RestrictedCustomerResponse;
+import com.equipmentrental.organizationcustomer.dto.response.RestrictionCheckResponse;
 import com.equipmentrental.organizationcustomer.entity.RestrictedCustomer;
 import com.equipmentrental.organizationcustomer.enums.RestrictionStatus;
 import com.equipmentrental.organizationcustomer.exception.BadRequestException;
@@ -136,6 +137,63 @@ public class RestrictedCustomerService {
                 .stream()
                 .map(this::toResponse)
                 .toList();
+    }
+
+
+    // =====================================================
+    // 3. KIỂM TRA KHÁCH ĐANG BỊ HẠN CHẾ KHÔNG
+    // =====================================================
+
+    @Transactional(readOnly = true)
+    public RestrictionCheckResponse check(
+            Long organizationId,
+            Long customerId
+    ) {
+
+        customerService.getEntity(
+                organizationId,
+                customerId
+        );
+
+
+        LocalDateTime now =
+                LocalDateTime.now();
+
+
+        boolean restricted =
+                repository
+                        .findAllByOrganizationIdAndCustomerIdAndStatus(
+                                organizationId,
+                                customerId,
+                                RestrictionStatus.ACTIVE
+                        )
+                        .stream()
+                        .anyMatch(
+                                restriction -> {
+
+                                    boolean started =
+                                            restriction.getRestrictedFrom()
+                                                    == null
+                                                    || !restriction
+                                                    .getRestrictedFrom()
+                                                    .isAfter(now);
+
+                                    boolean notExpired =
+                                            restriction.getRestrictedUntil()
+                                                    == null
+                                                    || !restriction
+                                                    .getRestrictedUntil()
+                                                    .isBefore(now);
+
+                                    return started && notExpired;
+                                }
+                        );
+
+
+        return new RestrictionCheckResponse(
+                customerId,
+                restricted
+        );
     }
 
 
