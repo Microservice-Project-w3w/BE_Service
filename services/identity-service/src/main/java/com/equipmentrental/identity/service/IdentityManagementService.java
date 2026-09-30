@@ -125,8 +125,12 @@ public class IdentityManagementService {
     }
 
     private Role role(String code) {
-        return roles.findByCode(code.trim().toUpperCase(Locale.ROOT))
+        Role role = roles.findByCode(code.trim().toUpperCase(Locale.ROOT))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Vai trò không hợp lệ"));
+        if (!role.isActive()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Vai trò đang bị vô hiệu hóa");
+        }
+        return role;
     }
 
     private UserResponse toResponse(User user) {
