@@ -114,4 +114,17 @@ public class CustomerGroupController {
     }
 
 
+    @GetMapping("/{groupId}/members")
+    public List<CustomerGroupMemberResponse> getMembers(
+            @PathVariable Long organizationId,
+            @PathVariable Long groupId
+    ) {
+
+        return groupService.getMembers(
+                organizationId,
+                groupId
+        );
+    }
+
+
 }

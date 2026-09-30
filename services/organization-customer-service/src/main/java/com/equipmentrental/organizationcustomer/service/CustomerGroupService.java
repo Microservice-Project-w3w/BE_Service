@@ -235,6 +235,29 @@ public class CustomerGroupService {
     }
 
 
+    // =====================================================
+    // 7. DANH SÁCH THÀNH VIÊN
+    // =====================================================
+
+    @Transactional(readOnly = true)
+    public List<CustomerGroupMemberResponse> getMembers(
+            Long organizationId,
+            Long groupId
+    ) {
+
+        getEntity(organizationId, groupId);
+
+        return memberRepository
+                .findAllByOrganizationIdAndCustomerGroupIdOrderByIdDesc(
+                        organizationId,
+                        groupId
+                )
+                .stream()
+                .map(this::memberToResponse)
+                .toList();
+    }
+
+
 
     public CustomerGroup getEntity(
             Long organizationId,
