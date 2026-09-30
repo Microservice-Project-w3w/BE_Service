@@ -6,6 +6,7 @@ import com.equipmentrental.organizationcustomer.service.BranchService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -26,6 +27,7 @@ public class BranchController {
     private final BranchService branchService;
 
     @PostMapping
+    @PreAuthorize("hasAuthority('organization.branch.create')")
     @ResponseStatus(HttpStatus.CREATED)
     public BranchResponse create(@PathVariable Long organizationId,
                                  @Valid @RequestBody BranchRequest request) {
@@ -33,17 +35,20 @@ public class BranchController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('organization.branch.read')")
     public List<BranchResponse> getAll(@PathVariable Long organizationId) {
         return branchService.getAll(organizationId);
     }
 
     @GetMapping("/{branchId}")
+    @PreAuthorize("hasAuthority('organization.branch.read')")
     public BranchResponse getById(@PathVariable Long organizationId,
                                   @PathVariable Long branchId) {
         return branchService.getById(organizationId, branchId);
     }
 
     @PutMapping("/{branchId}")
+    @PreAuthorize("hasAuthority('organization.branch.update')")
     public BranchResponse update(@PathVariable Long organizationId,
                                  @PathVariable Long branchId,
                                  @Valid @RequestBody BranchRequest request) {
@@ -51,6 +56,7 @@ public class BranchController {
     }
 
     @DeleteMapping("/{branchId}")
+    @PreAuthorize("hasAuthority('organization.branch.lock')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long organizationId,
                        @PathVariable Long branchId,

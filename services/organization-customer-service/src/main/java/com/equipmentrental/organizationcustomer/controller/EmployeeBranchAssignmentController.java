@@ -6,6 +6,7 @@ import com.equipmentrental.organizationcustomer.service.EmployeeBranchAssignment
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,6 +26,7 @@ public class EmployeeBranchAssignmentController {
     // =====================================================
 
     @PostMapping
+    @PreAuthorize("hasAuthority('organization.employee.assign-branch')")
     @ResponseStatus(HttpStatus.CREATED)
     public EmployeeBranchAssignmentResponse create(
 
@@ -52,6 +54,7 @@ public class EmployeeBranchAssignmentController {
     // =====================================================
 
     @GetMapping
+    @PreAuthorize("hasAuthority('organization.employee.read')")
     public List<EmployeeBranchAssignmentResponse> getAll(
 
             @PathVariable Long organizationId,
@@ -72,6 +75,7 @@ public class EmployeeBranchAssignmentController {
     // =====================================================
 
     @PatchMapping("/{assignmentId}/deactivate")
+    @PreAuthorize("hasAuthority('organization.employee.assign-branch')")
     public EmployeeBranchAssignmentResponse deactivate(
 
             @PathVariable Long organizationId,

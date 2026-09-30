@@ -36,6 +36,8 @@ public class AiChatController {
         return Map.of("status", "UP", "service", "ai-service", "provider", "ollama");
     }
 
-    public record ChatRequest(@NotBlank(message = "message is required") String message) {}
+    public record ChatRequest(@NotBlank(message = "message is required")
+                              @jakarta.validation.constraints.Size(max = 2000, message = "message must be at most 2000 characters")
+                              String message) {}
     public record ChatResponse(String answer, String model, String provider) {}
 }

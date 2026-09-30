@@ -8,6 +8,7 @@ import com.equipmentrental.organizationcustomer.service.CustomerService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -28,6 +29,7 @@ public class CustomerController {
     // =====================================================
 
     @PostMapping
+    @PreAuthorize("hasAuthority('customer.profile.create')")
     @ResponseStatus(HttpStatus.CREATED)
     public CustomerResponse create(
 
@@ -58,6 +60,7 @@ public class CustomerController {
     // =====================================================
 
     @GetMapping
+    @PreAuthorize("hasAuthority('customer.profile.read')")
     public List<CustomerResponse> getAll(
 
             @PathVariable Long organizationId,
@@ -93,6 +96,7 @@ public class CustomerController {
     // =====================================================
 
     @GetMapping("/{customerId}")
+    @PreAuthorize("hasAuthority('customer.profile.read')")
     public CustomerResponse getById(
 
             @PathVariable Long organizationId,
@@ -115,6 +119,7 @@ public class CustomerController {
     // =====================================================
 
     @PutMapping("/{customerId}")
+    @PreAuthorize("hasAuthority('customer.profile.update')")
     public CustomerResponse update(
 
             @PathVariable Long organizationId,
@@ -141,6 +146,7 @@ public class CustomerController {
     // =====================================================
 
     @DeleteMapping("/{customerId}")
+    @PreAuthorize("hasAuthority('customer.profile.update')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(
 
@@ -169,6 +175,7 @@ public class CustomerController {
     // =====================================================
 
     @GetMapping("/{customerId}/ownership")
+    @PreAuthorize("hasAuthority('customer.profile.read')")
     public OwnershipResponse checkOwnership(
 
             @PathVariable Long organizationId,

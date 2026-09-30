@@ -141,6 +141,10 @@ MANAGER,customer.restriction.read,BRANCH
 MANAGER,inventory.equipment.read,BRANCH
 MANAGER,inventory.warehouse.read,BRANCH
 MANAGER,inventory.availability.read,BRANCH
+MANAGER,inventory.reservation.read,BRANCH
+MANAGER,inventory.reservation.create,BRANCH
+MANAGER,inventory.reservation.confirm,BRANCH
+MANAGER,inventory.reservation.release,BRANCH
 MANAGER,rental.request.read,BRANCH
 MANAGER,rental.quotation.read,BRANCH
 MANAGER,rental.quotation.approve,BRANCH

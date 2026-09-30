@@ -37,6 +37,7 @@ public class AuthService {
     private final SessionService sessionService;
     private final VerificationService verificationService;
     private final PasswordHistoryRepository passwordHistoryRepository;
+    private final AuditLogService auditLogs;
 
     public AuthService(
             UserRepository userRepository,
@@ -45,7 +46,8 @@ public class AuthService {
             JwtService jwtService,
             SessionService sessionService,
             VerificationService verificationService,
-            PasswordHistoryRepository passwordHistoryRepository
+            PasswordHistoryRepository passwordHistoryRepository,
+            AuditLogService auditLogs
     ) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
@@ -54,6 +56,7 @@ public class AuthService {
         this.sessionService = sessionService;
         this.verificationService = verificationService;
         this.passwordHistoryRepository = passwordHistoryRepository;
+        this.auditLogs = auditLogs;
     }
 
     @Transactional
@@ -114,6 +117,7 @@ public class AuthService {
 
         User savedUser = userRepository.save(user);
         passwordHistoryRepository.save(new PasswordHistory(savedUser, savedUser.getPasswordHash(), "REGISTER"));
+        auditLogs.record(savedUser.getId(), "REGISTER", "USER", savedUser.getId(), "{}");
 
 
         return new RegisterResponse(
@@ -125,7 +129,7 @@ public class AuthService {
         );
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = ResponseStatusException.class)
     public AuthResponse login(LoginRequest request, String deviceName, String deviceType, String ipAddress, String userAgent) {
         String normalizedEmail = normalizeEmail(request.email());
 
@@ -168,6 +172,7 @@ public class AuthService {
                 user.getPasswordHash()
         )) {
             handleFailedLogin(user);
+            auditLogs.record(user.getId(), "LOGIN_FAILED", "USER", user.getId(), "{}");
 
             throw new ResponseStatusException(
                     HttpStatus.UNAUTHORIZED,
@@ -180,8 +185,9 @@ public class AuthService {
         user.setLastLoginAt(LocalDateTime.now());
 
         userRepository.save(user);
-
-        return issueTokens(user, sessionService.create(user, deviceName, deviceType, ipAddress, userAgent));
+        SessionService.IssuedSession session = sessionService.create(user, deviceName, deviceType, ipAddress, userAgent);
+        auditLogs.record(user.getId(), "LOGIN_SUCCESS", "USER_SESSION", session.session().getId(), "{}");
+        return issueTokens(user, session);
     }
 
     @Transactional
@@ -206,6 +212,7 @@ public class AuthService {
         }
         try {
             sessionService.revoke(Long.valueOf(sessionId), "LOGOUT");
+            auditLogs.record(Long.valueOf(jwt.getSubject()), "LOGOUT", "USER_SESSION", sessionId, "{}");
         } catch (NumberFormatException ignored) {
             // Older access tokens without a session id are stateless and simply expire.
         }
@@ -269,6 +276,7 @@ public class AuthService {
                 user.getId(),
                 "PASSWORD_RESET"
         );
+        auditLogs.record(user.getId(), "RESET_PASSWORD", "USER", user.getId(), "{}");
     }
 
     @Transactional
@@ -282,6 +290,7 @@ public class AuthService {
         userRepository.save(user);
         passwordHistoryRepository.save(new PasswordHistory(user, user.getPasswordHash(), "USER_CHANGE"));
         sessionService.revokeAllForUser(user.getId(), "PASSWORD_CHANGED");
+        auditLogs.record(userId, "CHANGE_PASSWORD", "USER", userId, "{}");
     }
 
     @Transactional(readOnly = true)
@@ -296,7 +305,9 @@ public class AuthService {
         user.setPhone(trimToNull(request.phone()));
         user.setCompanyName(trimToNull(request.companyName()));
         user.setTaxCode(trimToNull(request.taxCode()));
-        return profileResponse(userRepository.save(user));
+        ProfileResponse response = profileResponse(userRepository.save(user));
+        auditLogs.record(userId, "UPDATE_PROFILE", "USER", userId, "{}");
+        return response;
     }
 
     private User findUser(Long userId) {

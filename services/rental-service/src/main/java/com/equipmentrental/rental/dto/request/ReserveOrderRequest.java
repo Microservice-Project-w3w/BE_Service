@@ -1,9 +1,9 @@
 package com.equipmentrental.rental.dto.request;
 
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 import java.util.List;
 
 public record ReserveOrderRequest(
         @NotNull LocalDateTime reservedUntil,
-        @NotEmpty List<@NotNull Long> equipmentIds) {}
+        List<Long> equipmentIds) {}
