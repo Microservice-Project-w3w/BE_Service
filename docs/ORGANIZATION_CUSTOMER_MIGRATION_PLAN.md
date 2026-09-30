@@ -217,3 +217,67 @@ PUSH PERFORMED = NO
 MAIN TOUCHED = NO
 NEXT PROPOSED COMMIT = chore(organization-customer): establish service foundation
 ```
+
+## 10. Báo cáo hoàn thành Ngày 1 — 2026-09-28
+
+Foundation đã được commit/push trước khi bắt đầu Ngày 1. Trong Ngày 1 đã triển khai đúng 9 API theo thứ tự kế hoạch và tạo đúng 9 commit thực tế; không triển khai API Ngày 2.
+
+| API | Endpoint | Commit |
+|---:|---|---|
+| 1 | `POST /api/v1/organizations` | `31c88ac` — `feat(organization): implement create organization API` |
+| 2 | `GET /api/v1/organizations` | `7893f51` — `feat(organization): implement organization listing API` |
+| 3 | `GET /api/v1/organizations/{id}` | `dd67318` — `feat(organization): implement organization detail API` |
+| 4 | `PUT /api/v1/organizations/{id}` | `cefa7a6` — `feat(organization): implement update organization API` |
+| 5 | `DELETE /api/v1/organizations/{id}?actorUserId=` | `26f7bca` — `feat(organization): implement organization deactivation API` |
+| 6 | `POST /api/v1/organizations/{organizationId}/branches` | `51e3849` — `feat(branch): implement create branch API` |
+| 7 | `GET /api/v1/organizations/{organizationId}/branches` | `476e866` — `feat(branch): implement branch listing API` |
+| 8 | `GET /api/v1/organizations/{organizationId}/branches/{branchId}` | `86a6a1a` — `feat(branch): implement branch detail API` |
+| 9 | `PUT /api/v1/organizations/{organizationId}/branches/{branchId}` | `693dc26` — `feat(branch): implement update branch API` |
+
+### Phạm vi file
+
+- Organization: `OrganizationController`, `OrganizationService`, `OrganizationRequest`, `OrganizationResponse`, controller test và service test.
+- Branch: `BranchController`, `BranchService`, `BranchRequest`, `BranchResponse`, controller test và service test.
+- Foundation repository/entity/enum/exception được tái sử dụng, không làm lại.
+- Không sửa Identity, Inventory, Rental, Gateway, AI hoặc hạ tầng service khác.
+
+### Kiểm thử cuối Ngày 1
+
+Lệnh cuối: Maven 3.9.16 với JDK 23, `-pl services/organization-customer-service -am clean test`. Kết quả **PASS**: 36 tests, 0 failures, 0 errors, 0 skipped. Chi tiết: Organization controller 13, Organization service 10, Branch controller 5, Branch service 7, schema/Flyway 1.
+
+Đã kiểm tra validation, duplicate code/tax code, database constraint mapping, soft-delete, not-found, và branch organization scope. MySQL thật chưa được chạy; schema chỉ được kiểm tra bằng Flyway + Hibernate validate trên H2 MySQL mode.
+
+### Lỗi và cách xử lý
+
+- Maven không có trong PATH: dùng Maven 3.9.16 từ local wrapper cache.
+- JAVA_HOME ban đầu trỏ JDK 11: chỉ đặt JDK 23 cho tiến trình Maven.
+- Lombok trên JDK 23 cần annotation processing: foundation đã cấu hình `proc=full`.
+- Một lệnh đọc Surefire dùng sai vị trí tham số PowerShell; không ảnh hưởng Maven test hay commit, sau đó đã đọc lại bằng `Select-String -Path`.
+- Log Spring test rất dài do DEBUG/condition report nhưng kết quả Surefire vẫn được đối chiếu trực tiếp.
+
+### Giới hạn còn tồn tại
+
+- Chưa có JWT issuer/JWK và claim contract từ Identity; endpoint chưa có authentication/authorization production-ready.
+- `actorUserId` vẫn là dữ liệu client gửi, không phải authenticated identity.
+- Chưa chạy migration hoặc integration test trên MySQL 8 thật.
+- Báo cáo cuối ngày được cập nhật sau commit API 9 và đang để ở working tree, không tạo commit thứ 10 ngoài kế hoạch Ngày 1.
+
+```text
+FOUNDATION COMMITS = 1
+API COMMITS TODAY = 9
+TOTAL COMMITS FROM MAIN = 10
+REMAINING APIS = 27
+PUSH = NO (đối với 9 commit Ngày 1)
+MERGE = NO
+MAIN TOUCHED = NO
+```
+
+## 11. Hoàn thành migration API 10–36 — 2026-09-30
+
+- Đã triển khai đủ 27 API còn lại theo HTTP method/path của source.
+- Tổng business API: 36/36 (Organization 5, Branch 5, Employee 5, Employee-Branch 3, Customer 6, Customer Group 8, Restricted Customer 4).
+- Mỗi API 10–36 có một commit riêng với message theo kế hoạch; không tạo docs-only commit.
+- Kiểm thử theo từng API đã chạy bằng Maven 3.9.16 và JDK 23; final clean test được thực hiện sau commit API 36.
+- MySQL 8 thật chưa được chạy; Flyway/Hibernate schema validation dùng H2 MySQL mode.
+- Authorization vẫn chờ issuer/JWK, claims và permission contract từ Identity. Các `actorUserId`/`userId` trong request chưa phải authenticated identity.
+- Không push, không merge main, không sửa các service ngoài organization-customer-service.

@@ -1,5 +1,6 @@
 package com.equipmentrental.organizationcustomer.service;
 
+import com.equipmentrental.organizationcustomer.dto.request.RemoveRestrictionRequest;
 import com.equipmentrental.organizationcustomer.dto.request.RestrictedCustomerRequest;
 import com.equipmentrental.organizationcustomer.dto.response.RestrictedCustomerResponse;
 import com.equipmentrental.organizationcustomer.dto.response.RestrictionCheckResponse;
@@ -196,6 +197,61 @@ public class RestrictedCustomerService {
         );
     }
 
+
+    // =====================================================
+    // 4. GỠ HẠN CHẾ
+    // =====================================================
+
+    public RestrictedCustomerResponse remove(
+            Long organizationId,
+            Long restrictionId,
+            RemoveRestrictionRequest request
+    ) {
+
+        RestrictedCustomer restriction =
+                repository
+                        .findByIdAndOrganizationId(
+                                restrictionId,
+                                organizationId
+                        )
+                        .orElseThrow(
+                                () -> new NotFoundException(
+                                        "Không tìm thấy hạn chế id = "
+                                                + restrictionId
+                                )
+                        );
+
+
+        if (restriction.getStatus()
+                != RestrictionStatus.ACTIVE) {
+
+            throw new BadRequestException(
+                    "Hạn chế này không còn ở trạng thái ACTIVE"
+            );
+        }
+
+
+        restriction.setStatus(
+                RestrictionStatus.REMOVED
+        );
+
+        restriction.setRemovedAt(
+                LocalDateTime.now()
+        );
+
+        restriction.setRemovedByUserId(
+                request.removedByUserId()
+        );
+
+        restriction.setRemovedReason(
+                request.removedReason().trim()
+        );
+
+
+        return toResponse(
+                repository.save(restriction)
+        );
+    }
 
 
     private RestrictedCustomerResponse toResponse(

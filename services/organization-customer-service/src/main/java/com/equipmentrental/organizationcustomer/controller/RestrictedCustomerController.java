@@ -1,5 +1,6 @@
 package com.equipmentrental.organizationcustomer.controller;
 
+import com.equipmentrental.organizationcustomer.dto.request.RemoveRestrictionRequest;
 import com.equipmentrental.organizationcustomer.dto.request.RestrictedCustomerRequest;
 import com.equipmentrental.organizationcustomer.dto.response.RestrictedCustomerResponse;
 import com.equipmentrental.organizationcustomer.dto.response.RestrictionCheckResponse;
@@ -63,4 +64,18 @@ public class RestrictedCustomerController {
     }
 
 
+    @PatchMapping("/{restrictionId}/remove")
+    public RestrictedCustomerResponse remove(
+            @PathVariable Long organizationId,
+            @PathVariable Long restrictionId,
+            @Valid
+            @RequestBody RemoveRestrictionRequest request
+    ) {
+
+        return service.remove(
+                organizationId,
+                restrictionId,
+                request
+        );
+    }
 }
