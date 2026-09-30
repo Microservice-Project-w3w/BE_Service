@@ -10,6 +10,8 @@ import com.equipmentrental.identity.dto.auth.VerifyEmailRequest;
 import com.equipmentrental.identity.dto.auth.ChangePasswordRequest;
 import com.equipmentrental.identity.dto.auth.ResetPasswordRequest;
 import com.equipmentrental.identity.dto.auth.ConfirmResetPasswordRequest;
+import com.equipmentrental.identity.dto.auth.ProfileResponse;
+import com.equipmentrental.identity.dto.auth.ProfileUpdateRequest;
 import com.equipmentrental.identity.service.AuthService;
 import com.equipmentrental.identity.dto.response.ApiResponse;
 import jakarta.validation.Valid;
@@ -121,31 +123,17 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getCurrentUser(
+    public ResponseEntity<ApiResponse<ProfileResponse>> getCurrentUser(
             JwtAuthenticationToken authentication
     ) {
-        Map<String, Object> response =
-                new LinkedHashMap<>();
+        return ResponseEntity.ok(ApiResponse.success(authService.profile(Long.valueOf(authentication.getToken().getSubject()))));
+    }
 
-        response.put(
-                "email",
-                authentication
-                        .getToken()
-                        .getClaimAsString("preferred_username")
-        );
-
-        response.put(
-                "userId",
-                authentication.getToken().getSubject()
-        );
-
-        response.put(
-                "roles",
-                authentication
-                        .getToken()
-                        .getClaim("roles")
-        );
-
-        return ResponseEntity.ok(ApiResponse.success(response));
+    @PutMapping("/me")
+    public ResponseEntity<ApiResponse<ProfileResponse>> updateCurrentUser(
+            JwtAuthenticationToken authentication,
+            @Valid @RequestBody ProfileUpdateRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(
+                authService.updateProfile(Long.valueOf(authentication.getToken().getSubject()), request)));
     }
 }

@@ -12,7 +12,8 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate
+      # Giữ schema cũ và tự bổ sung các cột profile mới trong môi trường dev.
+      ddl-auto: update
     open-in-view: false
 
   flyway:
@@ -41,7 +42,7 @@ management:
 
 security:
   jwt:
-    issuer: equipment-rental-identity
-    access-token-minutes: 30
+    issuer: ${JWT_ISSUER:equipment-rental-identity}
+    access-token-minutes: ${JWT_ACCESS_TOKEN_MINUTES:30}
     refresh-token-days: 7
     secret-base64: ${JWT_SECRET_BASE64}

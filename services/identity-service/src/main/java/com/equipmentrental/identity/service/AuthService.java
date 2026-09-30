@@ -4,6 +4,8 @@ import com.equipmentrental.identity.dto.auth.AuthResponse;
 import com.equipmentrental.identity.dto.auth.LoginRequest;
 import com.equipmentrental.identity.dto.auth.RegisterRequest;
 import com.equipmentrental.identity.dto.auth.RegisterResponse;
+import com.equipmentrental.identity.dto.auth.ProfileResponse;
+import com.equipmentrental.identity.dto.auth.ProfileUpdateRequest;
 import com.equipmentrental.identity.entity.Role;
 import com.equipmentrental.identity.entity.User;
 import com.equipmentrental.identity.entity.UserStatus;
@@ -280,6 +282,37 @@ public class AuthService {
         userRepository.save(user);
         passwordHistoryRepository.save(new PasswordHistory(user, user.getPasswordHash(), "USER_CHANGE"));
         sessionService.revokeAllForUser(user.getId(), "PASSWORD_CHANGED");
+    }
+
+    @Transactional(readOnly = true)
+    public ProfileResponse profile(Long userId) {
+        return profileResponse(findUser(userId));
+    }
+
+    @Transactional
+    public ProfileResponse updateProfile(Long userId, ProfileUpdateRequest request) {
+        User user = findUser(userId);
+        user.setFullName(request.fullName().trim());
+        user.setPhone(trimToNull(request.phone()));
+        user.setCompanyName(trimToNull(request.companyName()));
+        user.setTaxCode(trimToNull(request.taxCode()));
+        return profileResponse(userRepository.save(user));
+    }
+
+    private User findUser(Long userId) {
+        return userRepository.findDetailedById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Tài khoản không tồn tại"));
+    }
+
+    private ProfileResponse profileResponse(User user) {
+        return new ProfileResponse(String.valueOf(user.getId()), user.getEmail(),
+                java.util.List.of(user.getRole().getCode()), user.getFullName(),
+                user.getPhone() == null ? "" : user.getPhone(),
+                user.getCompanyName(), user.getTaxCode());
+    }
+
+    private String trimToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 
     private AuthResponse issueTokens(User user, SessionService.IssuedSession issued) {

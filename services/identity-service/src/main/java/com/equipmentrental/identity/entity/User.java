@@ -63,6 +63,15 @@ public class User {
     )
     private String fullName;
 
+    @Column(name = "phone", length = 30)
+    private String phone;
+
+    @Column(name = "company_name", length = 255)
+    private String companyName;
+
+    @Column(name = "tax_code", length = 50)
+    private String taxCode;
+
     @Column(
             name = "email",
             nullable = false,
@@ -190,6 +199,10 @@ public class User {
         return email;
     }
 
+    public String getPhone() { return phone; }
+    public String getCompanyName() { return companyName; }
+    public String getTaxCode() { return taxCode; }
+
     public String getPasswordHash() {
         return passwordHash;
     }
@@ -240,6 +253,10 @@ public class User {
     public void setFullName(String fullName) {
         this.fullName = fullName;
     }
+
+    public void setPhone(String phone) { this.phone = phone; }
+    public void setCompanyName(String companyName) { this.companyName = companyName; }
+    public void setTaxCode(String taxCode) { this.taxCode = taxCode; }
 
     public void setEmail(String email) {
         this.email = email;
