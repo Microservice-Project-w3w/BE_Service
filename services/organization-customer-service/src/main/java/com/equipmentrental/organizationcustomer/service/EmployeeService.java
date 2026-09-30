@@ -5,6 +5,7 @@ import com.equipmentrental.organizationcustomer.dto.response.EmployeeResponse;
 import com.equipmentrental.organizationcustomer.entity.Employee;
 import com.equipmentrental.organizationcustomer.enums.EmployeeStatus;
 import com.equipmentrental.organizationcustomer.exception.ConflictException;
+import com.equipmentrental.organizationcustomer.exception.NotFoundException;
 import com.equipmentrental.organizationcustomer.repository.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -46,6 +47,16 @@ public class EmployeeService {
         organizationService.getEntity(organizationId);
         return employeeRepository.findAllByOrganizationIdAndDeletedAtIsNullOrderByIdDesc(organizationId)
                 .stream().map(this::toResponse).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public EmployeeResponse getById(Long organizationId, Long employeeId) {
+        return toResponse(getEntity(organizationId, employeeId));
+    }
+
+    public Employee getEntity(Long organizationId, Long employeeId) {
+        return employeeRepository.findByIdAndOrganizationIdAndDeletedAtIsNull(employeeId, organizationId)
+                .orElseThrow(() -> new NotFoundException("Không tìm thấy nhân viên id = " + employeeId));
     }
 
     private EmployeeResponse toResponse(Employee employee) {

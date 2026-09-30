@@ -48,4 +48,12 @@ class EmployeeControllerTest {
         mockMvc.perform(get("/api/v1/organizations/1/employees"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$[0].organizationId").value(1L));
     }
+
+    @Test
+    void detailReturnsEmployeeWithinOrganization() throws Exception {
+        when(employeeService.getById(1L, 2L)).thenReturn(new EmployeeResponse(2L, 1L, null,
+                "EMP-01", "A", null, null, null, EmployeeStatus.ACTIVE, null, null, null, null, null));
+        mockMvc.perform(get("/api/v1/organizations/1/employees/2"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.id").value(2L));
+    }
 }
