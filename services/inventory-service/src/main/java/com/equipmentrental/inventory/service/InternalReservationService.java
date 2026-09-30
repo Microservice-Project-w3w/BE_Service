@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.equipmentrental.inventory.dto.request.ReleaseInternalReservationRequest;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -163,6 +164,10 @@ public class InternalReservationService {
 
                         .endAt(
                                 request.endAt()
+                        )
+
+                        .expiresAt(
+                                request.expiresAt()
                         )
 
                         .status(
@@ -376,6 +381,14 @@ public class InternalReservationService {
 
             throw new IllegalArgumentException(
                     "endAt must be after startAt"
+            );
+        }
+
+        if (request.expiresAt() == null
+                || !request.expiresAt().isAfter(LocalDateTime.now())) {
+
+            throw new IllegalArgumentException(
+                    "expiresAt must be in the future"
             );
         }
 

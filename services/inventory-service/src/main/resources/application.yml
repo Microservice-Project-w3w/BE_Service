@@ -11,6 +11,10 @@ spring:
     open-in-view: false
   flyway:
     enabled: false
+security:
+  jwt:
+    issuer: ${JWT_ISSUER:equipment-rental-identity}
+    secret-base64: ${JWT_SECRET_BASE64:VGhpc0lzTXlTdXBlclNlY3JldEtleUZvckp3dDIwMjQhISE=}
 management:
   endpoints.web.exposure.include: health,info
   endpoint.health.show-details: always
