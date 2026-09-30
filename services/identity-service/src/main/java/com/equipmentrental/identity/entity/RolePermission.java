@@ -1,6 +1,6 @@
 package com.equipmentrental.identity.entity;
 
-import com.equipmentrental.common.security.DataScope;
+import com.equipmentrental.identity.security.DataScope;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
