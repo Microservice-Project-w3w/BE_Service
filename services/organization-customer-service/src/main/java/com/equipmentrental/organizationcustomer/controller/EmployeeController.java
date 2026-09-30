@@ -1,0 +1,23 @@
+package com.equipmentrental.organizationcustomer.controller;
+
+import com.equipmentrental.organizationcustomer.dto.request.EmployeeRequest;
+import com.equipmentrental.organizationcustomer.dto.response.EmployeeResponse;
+import com.equipmentrental.organizationcustomer.service.EmployeeService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/v1/organizations/{organizationId}/employees")
+@RequiredArgsConstructor
+public class EmployeeController {
+    private final EmployeeService employeeService;
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public EmployeeResponse create(@PathVariable Long organizationId,
+                                   @Valid @RequestBody EmployeeRequest request) {
+        return employeeService.create(organizationId, request);
+    }
+}
