@@ -19,4 +19,5 @@ public record RentalContractResponse(
         LocalDateTime approvedAt,
         LocalDateTime signedAt,
         LocalDateTime liquidatedAt,
-        String cancelReason) {}
+        String cancelReason,
+        String rejectionReason) {}

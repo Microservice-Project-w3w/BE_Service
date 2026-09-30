@@ -181,6 +181,11 @@ public class RentalWorkflowService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public QuotationResponse getQuotation(Long id) {
+        return RentalResponseMapper.quotation(findQuotation(id));
+    }
+
     public QuotationResponse sendQuotation(Long id) {
         Quotation q = findQuotation(id);
         if (q.getStatus() != QuotationStatus.DRAFT) throw ApiException.invalidStatus("Chỉ gửi được báo giá DRAFT");
@@ -204,11 +209,12 @@ public class RentalWorkflowService {
         return RentalResponseMapper.quotation(quotations.save(q));
     }
 
-    public QuotationResponse rejectQuotation(Long id) {
+    public QuotationResponse rejectQuotation(Long id, String reason) {
         Quotation q = findQuotation(id);
         if (q.getStatus() != QuotationStatus.SENT && q.getStatus() != QuotationStatus.APPROVED)
             throw ApiException.invalidStatus("Báo giá không thể từ chối ở trạng thái hiện tại");
         q.setStatus(QuotationStatus.REJECTED);
+        q.setRejectionReason(reason.trim());
         return RentalResponseMapper.quotation(quotations.save(q));
     }
 
@@ -257,7 +263,7 @@ public class RentalWorkflowService {
         if (o.getStatus() != OrderStatus.PENDING) throw ApiException.invalidStatus("Chỉ giữ chỗ đơn PENDING");
         if (!r.reservedUntil().isAfter(LocalDateTime.now()))
             throw new ApiException("Thời hạn giữ chỗ phải ở tương lai");
-        String reservationId = inventoryClient.createReservation(o, r.reservedUntil());
+        String reservationId = inventoryClient.createReservation(o, r.reservedUntil(), r.equipmentIds());
         o.setInventoryReservationId(reservationId);
         o.setReservedUntil(r.reservedUntil());
         o.setStatus(OrderStatus.RESERVED);
@@ -267,7 +273,7 @@ public class RentalWorkflowService {
     public RentalOrderResponse cancelOrder(Long id, CancelOrderRequest r) {
         RentalOrder o = findOrder(id);
         if (o.getStatus() == OrderStatus.CANCELLED) throw ApiException.invalidStatus("Đơn đã bị hủy");
-        if (o.getInventoryReservationId() != null) inventoryClient.releaseReservation(o.getInventoryReservationId());
+        if (o.getInventoryReservationId() != null) inventoryClient.releaseReservation(o.getInventoryReservationId(), r.reason());
         o.setStatus(OrderStatus.CANCELLED);
         o.setCancelReason(r.reason());
         return RentalResponseMapper.order(orders.save(o));
@@ -291,6 +297,11 @@ public class RentalWorkflowService {
         return values.stream()
                 .map(RentalResponseMapper::order)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public RentalOrderResponse getOrder(Long id) {
+        return RentalResponseMapper.order(findOrder(id));
     }
 
     private RentalRequest findRequest(Long id) {

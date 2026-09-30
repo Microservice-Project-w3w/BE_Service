@@ -17,6 +17,8 @@ public record CreateInternalReservationRequest(
 
         LocalDateTime endAt,
 
+        LocalDateTime expiresAt,
+
         List<CreateInternalReservationItemRequest> items
 
 ) {

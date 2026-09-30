@@ -19,4 +19,5 @@ public record QuotationResponse(
         String discountCode,
         QuotationStatus status,
         LocalDateTime validUntil,
-        String specialTerms) {}
+        String specialTerms,
+        String rejectionReason) {}

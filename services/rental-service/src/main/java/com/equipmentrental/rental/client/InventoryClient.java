@@ -5,8 +5,13 @@ import com.equipmentrental.common.web.CommonErrorCode;
 import com.equipmentrental.rental.entity.RentalOrder;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.time.LocalDateTime;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpHeaders;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -37,6 +42,7 @@ public class InventoryClient {
                             .queryParam("endAt", endAt)
                             .queryParam("quantity", quantity)
                             .build())
+                    .headers(this::forwardBearerToken)
                     .retrieve()
                     .body(JsonNode.class);
             return data(response);
@@ -45,11 +51,11 @@ public class InventoryClient {
         }
     }
 
-    public String createReservation(RentalOrder order, LocalDateTime reservedUntil) {
+    public String createReservation(RentalOrder order, LocalDateTime reservedUntil, List<Long> equipmentIds) {
         try {
             JsonNode response = restClient
-                    .post()
-                    .uri("/internal/reservations")
+                    .post().uri("/internal/reservations")
+                    .headers(this::forwardBearerToken)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(new ReservationRequest(
                             order.getOrderCode(),
@@ -58,7 +64,8 @@ public class InventoryClient {
                             order.getId(),
                             order.getStartAt(),
                             order.getEndAt(),
-                            reservedUntil))
+                            reservedUntil,
+                            equipmentIds.stream().map(ReservationItem::new).toList()))
                     .retrieve()
                     .body(JsonNode.class);
             JsonNode data = data(response);
@@ -78,13 +85,21 @@ public class InventoryClient {
         postWithoutBody("/internal/reservations/" + reservationId + "/confirm");
     }
 
-    public void releaseReservation(String reservationId) {
-        postWithoutBody("/internal/reservations/" + reservationId + "/release");
+    public void releaseReservation(String reservationId, String reason) {
+        try {
+            restClient.post().uri("/internal/reservations/" + reservationId + "/release")
+                    .headers(this::forwardBearerToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(new ReleaseReservationRequest(reason, currentUserId()))
+                    .retrieve().toBodilessEntity();
+        } catch (RestClientException exception) {
+            throw unavailable(exception);
+        }
     }
 
     private void postWithoutBody(String path) {
         try {
-            restClient.post().uri(path).retrieve().toBodilessEntity();
+            restClient.post().uri(path).headers(this::forwardBearerToken).retrieve().toBodilessEntity();
         } catch (RestClientException exception) {
             throw unavailable(exception);
         }
@@ -102,6 +117,25 @@ public class InventoryClient {
                 "Không thể kết nối inventory-service: " + exception.getMessage());
     }
 
+    private void forwardBearerToken(HttpHeaders headers) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication instanceof JwtAuthenticationToken jwtAuthentication) {
+            headers.setBearerAuth(jwtAuthentication.getToken().getTokenValue());
+        }
+    }
+
+    private Long currentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication instanceof JwtAuthenticationToken jwtAuthentication) {
+            try {
+                return Long.valueOf(jwtAuthentication.getToken().getSubject());
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
+        return null;
+    }
+
     private record ReservationRequest(
             String requestReference,
             Long organizationId,
@@ -109,5 +143,9 @@ public class InventoryClient {
             Long rentalOrderId,
             LocalDateTime startAt,
             LocalDateTime endAt,
-            LocalDateTime reservedUntil) {}
+            LocalDateTime expiresAt,
+            List<ReservationItem> items) {}
+
+    private record ReservationItem(Long equipmentId) {}
+    private record ReleaseReservationRequest(String reason, Long actorUserId) {}
 }

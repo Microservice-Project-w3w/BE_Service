@@ -7,6 +7,7 @@ import com.equipmentrental.rental.dto.request.QuotationUpdate;
 import com.equipmentrental.rental.dto.request.RentalRequestCreate;
 import com.equipmentrental.rental.dto.request.RentalRequestUpdate;
 import com.equipmentrental.rental.dto.request.ReserveOrderRequest;
+import com.equipmentrental.rental.dto.request.RejectQuotationRequest;
 import com.equipmentrental.rental.dto.response.QuotationResponse;
 import com.equipmentrental.rental.dto.response.RentalOrderResponse;
 import com.equipmentrental.rental.dto.response.RentalRequestResponse;
@@ -107,9 +108,15 @@ public class RentalWorkflowController {
 
     @GetMapping("/quotations")
     @PreAuthorize("hasAuthority('rental.quotation.read')")
-        ApiResponse<List<QuotationResponse>> quotations(
+    ApiResponse<List<QuotationResponse>> quotations(
             @RequestParam Long organizationId, @RequestParam Long branchId) {
         return ApiResponse.success(s.getQuotations(organizationId, branchId));
+    }
+
+    @GetMapping("/quotations/{id}")
+    @PreAuthorize("hasAuthority('rental.quotation.read')")
+    ApiResponse<QuotationResponse> quotationDetail(@PathVariable Long id) {
+        return ApiResponse.success(s.getQuotation(id));
     }
 
     @PatchMapping("/quotations/{id}/send")
@@ -138,8 +145,8 @@ public class RentalWorkflowController {
 
     @PatchMapping("/quotations/{id}/reject")
     @PreAuthorize("hasAuthority('rental.quotation.reject')")
-    ApiResponse<QuotationResponse> reject(@PathVariable Long id) {
-        return ApiResponse.success(s.rejectQuotation(id));
+    ApiResponse<QuotationResponse> reject(@PathVariable Long id, @Valid @RequestBody RejectQuotationRequest request) {
+        return ApiResponse.success(s.rejectQuotation(id, request.reason()));
     }
 
     @PostMapping("/quotations/{id}/convert-to-order")
@@ -150,9 +157,15 @@ public class RentalWorkflowController {
 
     @GetMapping("/rental-orders")
     @PreAuthorize("hasAuthority('rental.order.read')")
-        ApiResponse<List<RentalOrderResponse>> orders(
+    ApiResponse<List<RentalOrderResponse>> orders(
             @RequestParam Long organizationId, @RequestParam Long branchId) {
         return ApiResponse.success(s.getOrders(organizationId, branchId));
+    }
+
+    @GetMapping("/rental-orders/{id}")
+    @PreAuthorize("hasAuthority('rental.order.read')")
+    ApiResponse<RentalOrderResponse> orderDetail(@PathVariable Long id) {
+        return ApiResponse.success(s.getOrder(id));
     }
 
     @PatchMapping("/rental-orders/{id}/reserve")

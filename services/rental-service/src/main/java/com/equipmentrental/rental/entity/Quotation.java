@@ -54,6 +54,9 @@ public class Quotation {
     @Column(length = 1000)
     private String specialTerms;
 
+    @Column(length = 500)
+    private String rejectionReason;
+
     public Long getId() {
         return id;
     }
@@ -169,4 +172,7 @@ public class Quotation {
     public void setSpecialTerms(String v) {
         specialTerms = v;
     }
+
+    public String getRejectionReason() { return rejectionReason; }
+    public void setRejectionReason(String rejectionReason) { this.rejectionReason = rejectionReason; }
 }

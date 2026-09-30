@@ -5,6 +5,7 @@ import com.equipmentrental.rental.dto.request.AppendixCreateRequest;
 import com.equipmentrental.rental.dto.request.CancelContractRequest;
 import com.equipmentrental.rental.dto.request.ContractCreateRequest;
 import com.equipmentrental.rental.dto.request.ContractExtensionRequest;
+import com.equipmentrental.rental.dto.request.RejectContractRequest;
 import com.equipmentrental.rental.dto.response.ContractAppendixResponse;
 import com.equipmentrental.rental.dto.response.RentalContractResponse;
 import com.equipmentrental.rental.service.ContractService;
@@ -54,6 +55,13 @@ public class ContractController {
     @PreAuthorize("hasAuthority('rental.contract.approve')")
     public ApiResponse<RentalContractResponse> approve(@PathVariable Long id) {
         return ApiResponse.success(service.approve(id));
+    }
+
+    @PatchMapping("/{id}/reject")
+    @PreAuthorize("hasAuthority('rental.contract.approve')")
+    public ApiResponse<RentalContractResponse> reject(
+            @PathVariable Long id, @Valid @RequestBody RejectContractRequest request) {
+        return ApiResponse.success(service.reject(id, request));
     }
 
     @PatchMapping("/{id}/sign")
