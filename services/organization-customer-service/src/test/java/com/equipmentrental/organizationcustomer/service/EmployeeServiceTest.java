@@ -80,4 +80,27 @@ class EmployeeServiceTest {
         assertThatThrownBy(() -> employeeService.getById(1L, 2L))
                 .isInstanceOf(com.equipmentrental.organizationcustomer.exception.NotFoundException.class);
     }
+
+    @Test
+    void updatePreservesStatusWhenOmittedAndTrimsFields() {
+        Employee employee = Employee.builder().id(2L).organizationId(1L).employeeCode("EMP-01")
+                .fullName("A").status(EmployeeStatus.ACTIVE).build();
+        when(employeeRepository.findByIdAndOrganizationIdAndDeletedAtIsNull(2L, 1L)).thenReturn(Optional.of(employee));
+        when(employeeRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        var result = employeeService.update(1L, 2L, new EmployeeRequest(null, "EMP-01", " Updated ",
+                null, null, null, null, null, 7L));
+        assertThat(result.fullName()).isEqualTo("Updated");
+        assertThat(result.status()).isEqualTo(EmployeeStatus.ACTIVE);
+        assertThat(result.updatedBy()).isEqualTo(7L);
+    }
+
+    @Test
+    void updateRejectsDuplicateCode() {
+        Employee employee = Employee.builder().id(2L).organizationId(1L).employeeCode("EMP-01")
+                .fullName("A").status(EmployeeStatus.ACTIVE).build();
+        when(employeeRepository.findByIdAndOrganizationIdAndDeletedAtIsNull(2L, 1L)).thenReturn(Optional.of(employee));
+        when(employeeRepository.existsByOrganizationIdAndEmployeeCodeAndDeletedAtIsNull(1L, "EMP-02")).thenReturn(true);
+        var request = new EmployeeRequest(null, "EMP-02", "A", null, null, null, null, null, null);
+        assertThatThrownBy(() -> employeeService.update(1L, 2L, request)).isInstanceOf(ConflictException.class);
+    }
 }

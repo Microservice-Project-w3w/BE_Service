@@ -59,6 +59,32 @@ public class EmployeeService {
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy nhân viên id = " + employeeId));
     }
 
+    public EmployeeResponse update(Long organizationId, Long employeeId, EmployeeRequest request) {
+        Employee employee = getEntity(organizationId, employeeId);
+        if (!employee.getEmployeeCode().equals(request.employeeCode()) && employeeRepository
+                .existsByOrganizationIdAndEmployeeCodeAndDeletedAtIsNull(organizationId, request.employeeCode())) {
+            throw new ConflictException("Mã nhân viên đã tồn tại");
+        }
+        if (request.userId() != null && !request.userId().equals(employee.getUserId()) && employeeRepository
+                .existsByOrganizationIdAndUserIdAndDeletedAtIsNull(organizationId, request.userId())) {
+            throw new ConflictException("Tài khoản đã được liên kết với nhân viên khác");
+        }
+        employee.setUserId(request.userId());
+        employee.setEmployeeCode(request.employeeCode().trim());
+        employee.setFullName(request.fullName().trim());
+        employee.setEmail(clean(request.email()));
+        employee.setPhone(clean(request.phone()));
+        employee.setJobTitle(clean(request.jobTitle()));
+        employee.setHireDate(request.hireDate());
+        if (request.status() != null) employee.setStatus(request.status());
+        employee.setUpdatedBy(request.actorUserId());
+        try {
+            return toResponse(employeeRepository.save(employee));
+        } catch (DataIntegrityViolationException exception) {
+            throw new ConflictException("Mã nhân viên hoặc tài khoản đã tồn tại");
+        }
+    }
+
     private EmployeeResponse toResponse(Employee employee) {
         return new EmployeeResponse(employee.getId(), employee.getOrganizationId(), employee.getUserId(),
                 employee.getEmployeeCode(), employee.getFullName(), employee.getEmail(), employee.getPhone(),

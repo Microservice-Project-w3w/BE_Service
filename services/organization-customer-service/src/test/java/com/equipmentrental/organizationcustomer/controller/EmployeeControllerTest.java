@@ -15,6 +15,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import java.util.List;
@@ -55,5 +56,14 @@ class EmployeeControllerTest {
                 "EMP-01", "A", null, null, null, EmployeeStatus.ACTIVE, null, null, null, null, null));
         mockMvc.perform(get("/api/v1/organizations/1/employees/2"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.id").value(2L));
+    }
+
+    @Test
+    void updateReturnsEmployeeWithinOrganization() throws Exception {
+        when(employeeService.update(eq(1L), eq(2L), any())).thenReturn(new EmployeeResponse(2L, 1L, null,
+                "EMP-01", "Updated", null, null, null, EmployeeStatus.ACTIVE, null, null, 7L, null, null));
+        mockMvc.perform(put("/api/v1/organizations/1/employees/2").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"employeeCode\":\"EMP-01\",\"fullName\":\"Updated\",\"actorUserId\":7}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.fullName").value("Updated"));
     }
 }
