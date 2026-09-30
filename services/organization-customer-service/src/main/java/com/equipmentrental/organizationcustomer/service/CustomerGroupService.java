@@ -258,6 +258,34 @@ public class CustomerGroupService {
     }
 
 
+    // =====================================================
+    // 8. XÓA KHÁCH HÀNG KHỎI NHÓM
+    // =====================================================
+
+    public void removeMember(
+            Long organizationId,
+            Long groupId,
+            Long customerId
+    ) {
+
+        getEntity(organizationId, groupId);
+
+        CustomerGroupMember member =
+                memberRepository
+                        .findByOrganizationIdAndCustomerGroupIdAndCustomerId(
+                                organizationId,
+                                groupId,
+                                customerId
+                        )
+                        .orElseThrow(
+                                () -> new NotFoundException(
+                                        "Khách hàng không thuộc nhóm này"
+                                )
+                        );
+
+        memberRepository.delete(member);
+    }
+
 
     public CustomerGroup getEntity(
             Long organizationId,

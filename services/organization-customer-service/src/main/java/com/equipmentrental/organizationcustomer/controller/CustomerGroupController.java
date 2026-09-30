@@ -127,4 +127,18 @@ public class CustomerGroupController {
     }
 
 
+    @DeleteMapping("/{groupId}/members/{customerId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void removeMember(
+            @PathVariable Long organizationId,
+            @PathVariable Long groupId,
+            @PathVariable Long customerId
+    ) {
+
+        groupService.removeMember(
+                organizationId,
+                groupId,
+                customerId
+        );
+    }
 }
