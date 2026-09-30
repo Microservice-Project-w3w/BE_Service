@@ -14,3 +14,9 @@ spring:
 management:
   endpoints.web.exposure.include: health,info
   endpoint.health.show-details: always
+  security:
+    jwt:
+      issuer: equipment-rental-identity
+      access-token-minutes: 30
+      refresh-token-days: 7
+      secret-base64: ${JWT_SECRET_BASE64}
