@@ -61,14 +61,14 @@ public class AuthService {
         if (!normalizedEmail.endsWith("@gmail.com")) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "Hệ thống chỉ chấp nhận địa chỉ Gmail"
+                    "Há»‡ thá»‘ng chá»‰ cháº¥p nháº­n Ä‘á»‹a chá»‰ Gmail"
             );
         }
 
         if (userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
-                    "Gmail đã được sử dụng"
+                    "Gmail Ä‘Ă£ Ä‘Æ°á»£c sá»­ dá»¥ng"
             );
         }
 
@@ -77,14 +77,14 @@ public class AuthService {
                 .orElseThrow(() ->
                         new ResponseStatusException(
                                 HttpStatus.INTERNAL_SERVER_ERROR,
-                                "Chưa cấu hình vai trò CUSTOMER"
+                                "ChÆ°a cáº¥u hĂ¬nh vai trĂ² CUSTOMER"
                         )
                 );
 
         if (!customerRole.isActive()) {
             throw new ResponseStatusException(
                     HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Vai trò CUSTOMER đang bị vô hiệu hóa"
+                    "Vai trĂ² CUSTOMER Ä‘ang bá»‹ vĂ´ hiá»‡u hĂ³a"
             );
         }
 
@@ -98,14 +98,14 @@ public class AuthService {
         );
 
         /*
-         * Tài khoản chưa được đăng nhập cho tới khi xác minh Gmail.
+         * TĂ i khoáº£n chÆ°a Ä‘Æ°á»£c Ä‘Äƒng nháº­p cho tá»›i khi xĂ¡c minh Gmail.
          */
         user.setStatus(UserStatus.ACTIVE);
         user.setEmailVerified(true);
         user.setFailedLoginAttempts(0);
 
         /*
-         * Khách hàng tự đăng ký nên created_by = NULL.
+         * KhĂ¡ch hĂ ng tá»± Ä‘Äƒng kĂ½ nĂªn created_by = NULL.
          */
         user.setCreatedBy(null);
         user.setUpdatedBy(null);
@@ -118,7 +118,7 @@ public class AuthService {
                 savedUser.getId(),
                 savedUser.getEmail(),
                 savedUser.getStatus().name(),
-                "Đăng ký thành công.",
+                "ÄÄƒng kĂ½ thĂ nh cĂ´ng.",
                 null
         );
     }
@@ -132,7 +132,7 @@ public class AuthService {
                 .orElseThrow(() ->
                         new ResponseStatusException(
                                 HttpStatus.UNAUTHORIZED,
-                                "Gmail hoặc mật khẩu không chính xác"
+                                "Gmail hoáº·c máº­t kháº©u khĂ´ng chĂ­nh xĂ¡c"
                         )
                 );
 
@@ -143,21 +143,21 @@ public class AuthService {
 
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
-                    "Gmail chưa được xác minh"
+                    "Gmail chÆ°a Ä‘Æ°á»£c xĂ¡c minh"
             );
         }
 
         if (user.getStatus() == UserStatus.LOCKED) {
             throw new ResponseStatusException(
                     HttpStatus.LOCKED,
-                    "Tài khoản đang bị khóa"
+                    "TĂ i khoáº£n Ä‘ang bá»‹ khĂ³a"
             );
         }
 
         if (user.getStatus() != UserStatus.ACTIVE) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
-                    "Tài khoản không hoạt động"
+                    "TĂ i khoáº£n khĂ´ng hoáº¡t Ä‘á»™ng"
             );
         }
 
@@ -169,7 +169,7 @@ public class AuthService {
 
             throw new ResponseStatusException(
                     HttpStatus.UNAUTHORIZED,
-                    "Gmail hoặc mật khẩu không chính xác"
+                    "Gmail hoáº·c máº­t kháº©u khĂ´ng chĂ­nh xĂ¡c"
             );
         }
 
@@ -186,9 +186,9 @@ public class AuthService {
     public AuthResponse refresh(String refreshToken) {
         SessionService.IssuedSession issued = sessionService.rotate(refreshToken);
         User user = userRepository.findDetailedById(issued.session().getUser().getId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Tài khoản không tồn tại"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "TĂ i khoáº£n khĂ´ng tá»“n táº¡i"));
         if (user.getStatus() != UserStatus.ACTIVE || !user.isEmailVerified()) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tài khoản không hoạt động");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "TĂ i khoáº£n khĂ´ng hoáº¡t Ä‘á»™ng");
         }
         return issueTokens(user, issued);
     }
@@ -236,18 +236,15 @@ public class AuthService {
     @Transactional
     public void resetPassword(
             String email,
+            String code,
             String newPassword
     ) {
 
-        User user = userRepository
-                .findByEmailIgnoreCase(normalizeEmail(email))
-                .orElseThrow(() ->
-                        new ResponseStatusException(
-                                HttpStatus.NOT_FOUND,
-                                "Không tìm thấy tài khoản"
-                        )
-                );
-
+        User user = verificationService.verify(
+                normalizeEmail(email),
+                VerificationService.PURPOSE_RESET_PASSWORD,
+                code
+        );
         user.setPasswordHash(
                 passwordEncoder.encode(newPassword)
         );
@@ -275,9 +272,9 @@ public class AuthService {
     @Transactional
     public void changePassword(Long userId, String currentPassword, String newPassword) {
         User user = userRepository.findDetailedById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Tài khoản không tồn tại"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "TĂ i khoáº£n khĂ´ng tá»“n táº¡i"));
         if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mật khẩu hiện tại không chính xác");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Máº­t kháº©u hiá»‡n táº¡i khĂ´ng chĂ­nh xĂ¡c");
         }
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         userRepository.save(user);

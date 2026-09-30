@@ -102,8 +102,9 @@ public class AuthController {
             @Valid @RequestBody ConfirmResetPasswordRequest request
     ){
         authService.resetPassword(
-                request.email(),
-                request.newPassword()
+            request.email(),
+            request.code(),
+            request.newPassword()
         );
 
         return ApiResponse.success(

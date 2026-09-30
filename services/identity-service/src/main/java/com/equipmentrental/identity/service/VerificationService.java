@@ -19,21 +19,34 @@ public class VerificationService {
     private static final SecureRandom RANDOM = new SecureRandom();
     private final VerificationCodeRepository repository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
     private final boolean exposeCode;
 
 
-    public VerificationService(VerificationCodeRepository repository, PasswordEncoder passwordEncoder,
-                               @Value("${app.auth.expose-verification-code:false}") boolean exposeCode) {
+    public VerificationService(
+        VerificationCodeRepository repository,
+        PasswordEncoder passwordEncoder,
+        EmailService emailService,
+        @Value("${app.auth.expose-verification-code:false}") boolean exposeCode) {
         this.repository = repository;
         this.passwordEncoder = passwordEncoder;
+        this.emailService = emailService;
         this.exposeCode = exposeCode;
     }
 
     public String issue(User user, String purpose) {
         String code = String.format("%06d", RANDOM.nextInt(1_000_000));
-        repository.save(new VerificationCode(user, user.getEmail(), purpose, passwordEncoder.encode(code),
-                LocalDateTime.now().plusMinutes(15)));
-        // Email provider will consume this code in a later integration. It is exposed only when explicitly enabled for local testing.
+
+        repository.save(new VerificationCode(
+            user,
+            user.getEmail(),
+            purpose,
+            passwordEncoder.encode(code),
+            LocalDateTime.now().plusMinutes(15)
+        ));
+
+        emailService.sendVerificationCode(user.getEmail(), code, purpose);
+
         return exposeCode ? code : null;
     }
 
