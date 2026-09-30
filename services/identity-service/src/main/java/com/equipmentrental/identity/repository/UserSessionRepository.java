@@ -8,4 +8,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface UserSessionRepository extends JpaRepository<UserSession, Long> {
     Optional<UserSession> findByRefreshTokenHash(String refreshTokenHash);
     List<UserSession> findByUserIdOrderByLoginAtDesc(Long userId);
+    Optional<UserSession> findByIdAndUserId(Long id, Long userId);
 }

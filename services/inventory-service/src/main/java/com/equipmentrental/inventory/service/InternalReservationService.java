@@ -20,6 +20,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.equipmentrental.inventory.dto.request.ReleaseInternalReservationRequest;
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -121,9 +124,17 @@ public class InternalReservationService {
             /*
              * Kiểm tra model tồn tại.
              */
-            getEquipmentModel(
+            EquipmentModel model = getEquipmentModel(
                     equipment.getModelId()
             );
+
+            if (!itemRepository.findBlockingItems(request.organizationId(), request.branchId(),
+                    model.getEquipmentTypeId(), List.of(equipment.getId()),
+                    List.of(ReservationStatus.HELD, ReservationStatus.CONFIRMED), request.startAt(), request.endAt(),
+                    LocalDateTime.now()).isEmpty()) {
+                throw new IllegalStateException("Equipment " + equipment.getId()
+                        + " đã được giữ chỗ trong khoảng thời gian yêu cầu");
+            }
         }
 
         /*
@@ -272,6 +283,12 @@ public class InternalReservationService {
             );
         }
 
+        if (reservation.getExpiresAt() != null && !reservation.getExpiresAt().isAfter(LocalDateTime.now())) {
+            reservation.setStatus(ReservationStatus.EXPIRED);
+            reservationRepository.save(reservation);
+            throw new IllegalStateException("Reservation đã hết hạn");
+        }
+
         /*
          * Nếu Rental Service gửi rentalOrderId
          * thì phải khớp với reservation đã tạo.
@@ -400,6 +417,7 @@ public class InternalReservationService {
             );
         }
 
+        Set<Long> equipmentIds = new HashSet<>();
         for (CreateInternalReservationItemRequest item
                 : request.items()) {
 
@@ -410,7 +428,18 @@ public class InternalReservationService {
                         "equipmentId is required for every item"
                 );
             }
+            if (!equipmentIds.add(item.equipmentId())) {
+                throw new IllegalArgumentException("equipmentId bị lặp trong reservation: " + item.equipmentId());
+            }
         }
+    }
+
+    @Transactional
+    public int expireOverdueReservations() {
+        List<EquipmentReservation> expired = reservationRepository
+                .findByStatusAndExpiresAtBefore(ReservationStatus.HELD, LocalDateTime.now());
+        expired.forEach(reservation -> reservation.setStatus(ReservationStatus.EXPIRED));
+        return expired.size();
     }
 
     // =====================================================

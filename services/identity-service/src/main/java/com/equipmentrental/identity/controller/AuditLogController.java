@@ -18,7 +18,12 @@ public class AuditLogController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('identity.user.read')")
-    public ApiResponse<List<AuditLogResponse>> list(@RequestParam(required = false) Long userId) {
-        return ApiResponse.success(service.list(userId));
+    public ApiResponse<List<AuditLogResponse>> list(@RequestParam(required = false) Long userId,
+            @RequestParam(required = false) String actionCode,
+            @RequestParam(defaultValue = "100") int limit) {
+        if (limit < 1 || limit > 200) {
+            throw new IllegalArgumentException("limit phải nằm trong khoảng 1 đến 200");
+        }
+        return ApiResponse.success(service.list(userId, actionCode, limit));
     }
 }

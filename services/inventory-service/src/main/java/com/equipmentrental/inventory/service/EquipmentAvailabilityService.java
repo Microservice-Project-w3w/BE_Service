@@ -6,6 +6,8 @@ import com.equipmentrental.inventory.entity.EquipmentModel;
 import com.equipmentrental.inventory.enums.EquipmentStatus;
 import com.equipmentrental.inventory.repository.EquipmentModelRepository;
 import com.equipmentrental.inventory.repository.EquipmentRepository;
+import com.equipmentrental.inventory.repository.EquipmentReservationItemRepository;
+import com.equipmentrental.inventory.enums.ReservationStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +22,7 @@ public class EquipmentAvailabilityService {
 
     private final EquipmentRepository equipmentRepository;
     private final EquipmentModelRepository equipmentModelRepository;
+    private final EquipmentReservationItemRepository reservationItems;
 
     @Transactional(readOnly = true)
     public EquipmentAvailabilityResponse checkAvailability(
@@ -90,8 +93,16 @@ public class EquipmentAvailabilityService {
 
                         .toList();
 
-        int availableQuantity =
-                availableEquipmentIds.size();
+        List<Long> blockedEquipmentIds = reservationItems.findBlockingItems(
+                        organizationId, branchId, equipmentTypeId, availableEquipmentIds,
+                        List.of(ReservationStatus.HELD, ReservationStatus.CONFIRMED), startAt, endAt,
+                        LocalDateTime.now())
+                .stream().map(item -> item.getEquipmentId()).distinct().toList();
+        availableEquipmentIds = availableEquipmentIds.stream()
+                .filter(id -> !blockedEquipmentIds.contains(id))
+                .toList();
+
+        int availableQuantity = availableEquipmentIds.size();
 
         // 5. Trả response.
         return EquipmentAvailabilityResponse.builder()

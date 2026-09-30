@@ -15,6 +15,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.equipmentrental.identity.exception.IdentityException;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 @Service
 @Transactional
 public class SessionService {
@@ -51,6 +53,13 @@ public class SessionService {
             return;
         }
         repository.findById(sessionId).ifPresent(session -> session.revoke(reason));
+    }
+
+    public void revokeForUser(Long userId, Long sessionId, String reason) {
+        UserSession session = repository.findByIdAndUserId(sessionId, userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Không tìm thấy phiên đăng nhập của tài khoản này"));
+        session.revoke(reason);
     }
 
     public void revokeAllForUser(Long userId, String reason) {

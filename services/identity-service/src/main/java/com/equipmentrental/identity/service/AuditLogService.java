@@ -27,11 +27,17 @@ public class AuditLogService {
     }
 
     @Transactional(readOnly = true)
-    public List<AuditLogResponse> list(Long userId) {
+    public List<AuditLogResponse> list(Long userId, String actionCode, int limit) {
         List<AuditLog> entries = userId == null
                 ? auditLogs.findTop200ByOrderByCreatedAtDesc()
                 : auditLogs.findTop200ByUserIdOrderByCreatedAtDesc(userId);
-        return entries.stream().map(this::toResponse).toList();
+        String normalizedAction = actionCode == null ? null : actionCode.trim().toUpperCase();
+        return entries.stream()
+                .filter(log -> normalizedAction == null || normalizedAction.isBlank()
+                        || normalizedAction.equals(log.getActionCode()))
+                .limit(limit)
+                .map(this::toResponse)
+                .toList();
     }
 
     private AuditLogResponse toResponse(AuditLog log) {
