@@ -181,6 +181,57 @@ public class EmployeeBranchAssignmentService {
 
 
     // =====================================================
+    // 2. DANH SÁCH PHÂN CÔNG
+    // =====================================================
+
+    @Transactional(readOnly = true)
+    public List<EmployeeBranchAssignmentResponse> getAll(
+
+            Long organizationId,
+
+            Long employeeId
+    ) {
+
+        organizationService.getEntity(
+                organizationId
+        );
+
+
+        List<EmployeeBranchAssignment> assignments;
+
+
+        if (employeeId == null) {
+
+            assignments =
+                    assignmentRepository
+                            .findAllByOrganizationIdOrderByIdDesc(
+                                    organizationId
+                            );
+
+        } else {
+
+            employeeService.getEntity(
+                    organizationId,
+                    employeeId
+            );
+
+            assignments =
+                    assignmentRepository
+                            .findAllByOrganizationIdAndEmployeeIdOrderByIdDesc(
+                                    organizationId,
+                                    employeeId
+                            );
+        }
+
+
+        return assignments
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+
+    // =====================================================
     // ENTITY -> RESPONSE
     // =====================================================
 

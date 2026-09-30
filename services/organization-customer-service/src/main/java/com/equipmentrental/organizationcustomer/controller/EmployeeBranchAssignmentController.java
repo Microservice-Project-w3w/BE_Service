@@ -51,4 +51,24 @@ public class EmployeeBranchAssignmentController {
     // GET .../employee-branch-assignments?employeeId=1
     // =====================================================
 
+    @GetMapping
+    public List<EmployeeBranchAssignmentResponse> getAll(
+
+            @PathVariable Long organizationId,
+
+            @RequestParam(required = false)
+            Long employeeId
+    ) {
+
+        return assignmentService.getAll(
+                organizationId,
+                employeeId
+        );
+    }
+
+
+    // =====================================================
+    // 3. NGỪNG PHÂN CÔNG
+    // =====================================================
+
 }
