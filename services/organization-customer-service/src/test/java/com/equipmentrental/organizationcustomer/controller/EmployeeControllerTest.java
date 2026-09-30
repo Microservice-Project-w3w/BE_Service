@@ -16,6 +16,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import java.util.List;
@@ -65,5 +66,12 @@ class EmployeeControllerTest {
         mockMvc.perform(put("/api/v1/organizations/1/employees/2").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"employeeCode\":\"EMP-01\",\"fullName\":\"Updated\",\"actorUserId\":7}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.fullName").value("Updated"));
+    }
+
+    @Test
+    void deleteReturns204() throws Exception {
+        mockMvc.perform(delete("/api/v1/organizations/1/employees/2").param("actorUserId", "7"))
+                .andExpect(status().isNoContent());
+        org.mockito.Mockito.verify(employeeService).delete(1L, 2L, 7L);
     }
 }

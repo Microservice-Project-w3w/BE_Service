@@ -12,6 +12,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -83,6 +84,14 @@ public class EmployeeService {
         } catch (DataIntegrityViolationException exception) {
             throw new ConflictException("Mã nhân viên hoặc tài khoản đã tồn tại");
         }
+    }
+
+    public void delete(Long organizationId, Long employeeId, Long actorUserId) {
+        Employee employee = getEntity(organizationId, employeeId);
+        employee.setStatus(EmployeeStatus.DELETED);
+        employee.setDeletedAt(LocalDateTime.now());
+        employee.setUpdatedBy(actorUserId);
+        employeeRepository.save(employee);
     }
 
     private EmployeeResponse toResponse(Employee employee) {

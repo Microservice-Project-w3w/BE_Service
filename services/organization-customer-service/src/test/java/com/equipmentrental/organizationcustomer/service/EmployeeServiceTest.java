@@ -16,6 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 import java.util.List;
 import java.util.Optional;
 
@@ -102,5 +103,17 @@ class EmployeeServiceTest {
         when(employeeRepository.existsByOrganizationIdAndEmployeeCodeAndDeletedAtIsNull(1L, "EMP-02")).thenReturn(true);
         var request = new EmployeeRequest(null, "EMP-02", "A", null, null, null, null, null, null);
         assertThatThrownBy(() -> employeeService.update(1L, 2L, request)).isInstanceOf(ConflictException.class);
+    }
+
+    @Test
+    void deleteSoftDeletesEmployee() {
+        Employee employee = Employee.builder().id(2L).organizationId(1L).employeeCode("EMP-01")
+                .fullName("A").status(EmployeeStatus.ACTIVE).build();
+        when(employeeRepository.findByIdAndOrganizationIdAndDeletedAtIsNull(2L, 1L)).thenReturn(Optional.of(employee));
+        employeeService.delete(1L, 2L, 7L);
+        assertThat(employee.getStatus()).isEqualTo(EmployeeStatus.DELETED);
+        assertThat(employee.getDeletedAt()).isNotNull();
+        assertThat(employee.getUpdatedBy()).isEqualTo(7L);
+        verify(employeeRepository).save(employee);
     }
 }

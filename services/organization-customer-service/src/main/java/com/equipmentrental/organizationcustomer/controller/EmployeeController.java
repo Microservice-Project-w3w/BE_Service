@@ -37,4 +37,11 @@ public class EmployeeController {
                                    @Valid @RequestBody EmployeeRequest request) {
         return employeeService.update(organizationId, employeeId, request);
     }
+
+    @DeleteMapping("/{employeeId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable Long organizationId, @PathVariable Long employeeId,
+                       @RequestParam(required = false) Long actorUserId) {
+        employeeService.delete(organizationId, employeeId, actorUserId);
+    }
 }
