@@ -158,7 +158,7 @@ Public path bắt buộc: `/api/v1/rental-requests/**`, `/api/v1/quotations/**`,
 
 ---
 
-## Việc của bạn — Gateway và AI
+## Việc của Phạm Đình Đức Vượng — Gateway và AI
 
 ### Gateway
 
