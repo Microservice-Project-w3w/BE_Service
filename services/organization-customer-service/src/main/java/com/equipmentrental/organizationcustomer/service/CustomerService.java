@@ -191,6 +191,162 @@ public class CustomerService {
 
 
     // =====================================================
+    // 2. DANH SÁCH + TÌM KIẾM + LỌC
+    // =====================================================
+
+    @Transactional(readOnly = true)
+    public List<CustomerResponse> getAll(
+
+            Long organizationId,
+
+            Long branchId,
+
+            CustomerType customerType,
+
+            Long ownerUserId,
+
+            String q
+    ) {
+
+        organizationService.getEntity(
+                organizationId
+        );
+
+
+        /*
+         * Bắt buộc mọi query phải nằm trong organization
+         * hiện tại và chưa bị xóa mềm.
+         */
+        Specification<Customer> specification =
+                (root, query, cb) ->
+                        cb.and(
+                                cb.equal(
+                                        root.get("organizationId"),
+                                        organizationId
+                                ),
+                                cb.isNull(
+                                        root.get("deletedAt")
+                                )
+                        );
+
+
+        // Lọc theo branch
+        if (branchId != null) {
+
+            // Branch phải thực sự thuộc organization
+            branchService.getEntity(
+                    organizationId,
+                    branchId
+            );
+
+            specification = specification.and(
+                    (root, query, cb) ->
+                            cb.equal(
+                                    root.get("branchId"),
+                                    branchId
+                            )
+            );
+        }
+
+
+        // Lọc khách cá nhân / doanh nghiệp
+        if (customerType != null) {
+
+            specification = specification.and(
+                    (root, query, cb) ->
+                            cb.equal(
+                                    root.get("customerType"),
+                                    customerType
+                            )
+            );
+        }
+
+
+        // Lọc theo ownerUserId
+        if (ownerUserId != null) {
+
+            specification = specification.and(
+                    (root, query, cb) ->
+                            cb.equal(
+                                    root.get("ownerUserId"),
+                                    ownerUserId
+                            )
+            );
+        }
+
+
+        // Search frontend / API
+        if (q != null && !q.isBlank()) {
+
+            String keyword =
+                    "%" + q.trim().toLowerCase() + "%";
+
+
+            specification = specification.and(
+                    (root, query, cb) ->
+                            cb.or(
+
+                                    cb.like(
+                                            cb.lower(
+                                                    root.get("customerCode")
+                                            ),
+                                            keyword
+                                    ),
+
+                                    cb.like(
+                                            cb.lower(
+                                                    root.get("displayName")
+                                            ),
+                                            keyword
+                                    ),
+
+                                    cb.like(
+                                            cb.lower(
+                                                    root.get("email")
+                                            ),
+                                            keyword
+                                    ),
+
+                                    cb.like(
+                                            cb.lower(
+                                                    root.get("phone")
+                                            ),
+                                            keyword
+                                    ),
+
+                                    cb.like(
+                                            cb.lower(
+                                                    root.get("fullName")
+                                            ),
+                                            keyword
+                                    ),
+
+                                    cb.like(
+                                            cb.lower(
+                                                    root.get("companyName")
+                                            ),
+                                            keyword
+                                    )
+                            )
+            );
+        }
+
+
+        return customerRepository
+                .findAll(
+                        specification,
+                        Sort.by(
+                                Sort.Direction.DESC,
+                                "id"
+                        )
+                )
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+
+    // =====================================================
     // 8. KIỂM TRA BRANCH
     // =====================================================
 

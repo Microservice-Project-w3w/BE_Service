@@ -56,4 +56,39 @@ public class CustomerController {
     // ?q=nguyen
     // =====================================================
 
+    @GetMapping
+    public List<CustomerResponse> getAll(
+
+            @PathVariable Long organizationId,
+
+            @RequestParam(required = false)
+            Long branchId,
+
+            @RequestParam(required = false)
+            CustomerType customerType,
+
+            @RequestParam(required = false)
+            Long ownerUserId,
+
+            @RequestParam(required = false)
+            String q
+    ) {
+
+        return customerService.getAll(
+                organizationId,
+                branchId,
+                customerType,
+                ownerUserId,
+                q
+        );
+    }
+
+
+    // =====================================================
+    // 3. CHI TIẾT KHÁCH HÀNG
+    //
+    // GET
+    // /api/v1/organizations/{organizationId}/customers/{customerId}
+    // =====================================================
+
 }
