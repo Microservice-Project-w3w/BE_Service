@@ -94,6 +94,51 @@ public class RestrictedCustomerService {
     }
 
 
+    // =====================================================
+    // 2. DANH SÁCH / LỊCH SỬ
+    // =====================================================
+
+    @Transactional(readOnly = true)
+    public List<RestrictedCustomerResponse> getAll(
+            Long organizationId,
+            Long customerId
+    ) {
+
+        organizationService.getEntity(organizationId);
+
+        List<RestrictedCustomer> restrictions;
+
+        if (customerId == null) {
+
+            restrictions =
+                    repository
+                            .findAllByOrganizationIdOrderByIdDesc(
+                                    organizationId
+                            );
+
+        } else {
+
+            customerService.getEntity(
+                    organizationId,
+                    customerId
+            );
+
+            restrictions =
+                    repository
+                            .findAllByOrganizationIdAndCustomerIdOrderByIdDesc(
+                                    organizationId,
+                                    customerId
+                            );
+        }
+
+
+        return restrictions
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+
 
     private RestrictedCustomerResponse toResponse(
             RestrictedCustomer restriction

@@ -35,4 +35,18 @@ public class RestrictedCustomerController {
     }
 
 
+    @GetMapping
+    public List<RestrictedCustomerResponse> getAll(
+            @PathVariable Long organizationId,
+            @RequestParam(required = false)
+            Long customerId
+    ) {
+
+        return service.getAll(
+                organizationId,
+                customerId
+        );
+    }
+
+
 }
