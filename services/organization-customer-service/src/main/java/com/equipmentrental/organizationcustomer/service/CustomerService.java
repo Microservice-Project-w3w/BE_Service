@@ -347,6 +347,54 @@ public class CustomerService {
 
 
     // =====================================================
+    // 3. CHI TIẾT KHÁCH HÀNG
+    // =====================================================
+
+    @Transactional(readOnly = true)
+    public CustomerResponse getById(
+
+            Long organizationId,
+
+            Long customerId
+    ) {
+
+        return toResponse(
+                getEntity(
+                        organizationId,
+                        customerId
+                )
+        );
+    }
+
+
+    // =====================================================
+    // 7. LẤY CUSTOMER ENTITY NỘI BỘ
+    // =====================================================
+
+    public Customer getEntity(
+
+            Long organizationId,
+
+            Long customerId
+    ) {
+
+        return customerRepository
+                .findByIdAndOrganizationIdAndDeletedAtIsNull(
+                        customerId,
+                        organizationId
+                )
+                .orElseThrow(
+                        () -> new NotFoundException(
+                                "Không tìm thấy khách hàng id = "
+                                        + customerId
+                                        + " trong doanh nghiệp id = "
+                                        + organizationId
+                        )
+                );
+    }
+
+
+    // =====================================================
     // 8. KIỂM TRA BRANCH
     // =====================================================
 

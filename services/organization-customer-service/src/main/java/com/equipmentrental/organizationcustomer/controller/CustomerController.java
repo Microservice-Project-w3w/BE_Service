@@ -91,4 +91,26 @@ public class CustomerController {
     // /api/v1/organizations/{organizationId}/customers/{customerId}
     // =====================================================
 
+    @GetMapping("/{customerId}")
+    public CustomerResponse getById(
+
+            @PathVariable Long organizationId,
+
+            @PathVariable Long customerId
+    ) {
+
+        return customerService.getById(
+                organizationId,
+                customerId
+        );
+    }
+
+
+    // =====================================================
+    // 4. CẬP NHẬT KHÁCH HÀNG
+    //
+    // PUT
+    // /api/v1/organizations/{organizationId}/customers/{customerId}
+    // =====================================================
+
 }
