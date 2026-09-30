@@ -1,6 +1,7 @@
 package com.equipmentrental.organizationcustomer.controller;
 
 import com.equipmentrental.organizationcustomer.dto.request.CustomerGroupRequest;
+import com.equipmentrental.organizationcustomer.dto.response.CustomerGroupMemberResponse;
 import com.equipmentrental.organizationcustomer.dto.response.CustomerGroupResponse;
 import com.equipmentrental.organizationcustomer.service.CustomerGroupService;
 import jakarta.validation.Valid;
@@ -93,5 +94,24 @@ public class CustomerGroupController {
     // =====================================================
     // THÀNH VIÊN NHÓM
     // =====================================================
+
+    @PostMapping("/{groupId}/members/{customerId}")
+    @ResponseStatus(HttpStatus.CREATED)
+    public CustomerGroupMemberResponse addMember(
+            @PathVariable Long organizationId,
+            @PathVariable Long groupId,
+            @PathVariable Long customerId,
+            @RequestParam(required = false)
+            Long actorUserId
+    ) {
+
+        return groupService.addMember(
+                organizationId,
+                groupId,
+                customerId,
+                actorUserId
+        );
+    }
+
 
 }

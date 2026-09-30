@@ -1,6 +1,7 @@
 package com.equipmentrental.organizationcustomer.service;
 
 import com.equipmentrental.organizationcustomer.dto.request.CustomerGroupRequest;
+import com.equipmentrental.organizationcustomer.dto.response.CustomerGroupMemberResponse;
 import com.equipmentrental.organizationcustomer.dto.response.CustomerGroupResponse;
 import com.equipmentrental.organizationcustomer.entity.CustomerGroup;
 import com.equipmentrental.organizationcustomer.entity.CustomerGroupMember;
@@ -189,6 +190,51 @@ public class CustomerGroupService {
     }
 
 
+    // =====================================================
+    // 6. THÊM KHÁCH HÀNG VÀO NHÓM
+    // =====================================================
+
+    public CustomerGroupMemberResponse addMember(
+            Long organizationId,
+            Long groupId,
+            Long customerId,
+            Long actorUserId
+    ) {
+
+        getEntity(organizationId, groupId);
+
+        // Customer cũng phải thuộc Organization này
+        customerService.getEntity(
+                organizationId,
+                customerId
+        );
+
+        if (memberRepository
+                .existsByOrganizationIdAndCustomerGroupIdAndCustomerId(
+                        organizationId,
+                        groupId,
+                        customerId
+                )) {
+
+            throw new ConflictException(
+                    "Khách hàng đã thuộc nhóm này"
+            );
+        }
+
+        CustomerGroupMember member =
+                CustomerGroupMember.builder()
+                        .organizationId(organizationId)
+                        .customerGroupId(groupId)
+                        .customerId(customerId)
+                        .createdBy(actorUserId)
+                        .build();
+
+        return memberToResponse(
+                memberRepository.save(member)
+        );
+    }
+
+
 
     public CustomerGroup getEntity(
             Long organizationId,
@@ -224,6 +270,21 @@ public class CustomerGroupService {
                 group.getUpdatedBy(),
                 group.getCreatedAt(),
                 group.getUpdatedAt()
+        );
+    }
+
+
+    private CustomerGroupMemberResponse memberToResponse(
+            CustomerGroupMember member
+    ) {
+
+        return new CustomerGroupMemberResponse(
+                member.getId(),
+                member.getOrganizationId(),
+                member.getCustomerGroupId(),
+                member.getCustomerId(),
+                member.getCreatedBy(),
+                member.getCreatedAt()
         );
     }
 
