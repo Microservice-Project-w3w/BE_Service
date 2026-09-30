@@ -16,6 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import java.util.List;
 
 @ExtendWith(MockitoExtension.class)
 class EmployeeServiceTest {
@@ -52,5 +53,15 @@ class EmployeeServiceTest {
         when(employeeRepository.existsByOrganizationIdAndUserIdAndDeletedAtIsNull(1L, 9L)).thenReturn(true);
         var request = new EmployeeRequest(9L, "EMP-01", "A", null, null, null, null, null, null);
         assertThatThrownBy(() -> employeeService.create(1L, request)).isInstanceOf(ConflictException.class);
+    }
+
+    @Test
+    void getAllScopesToOrganizationAndExcludesDeletedEmployees() {
+        when(organizationService.getEntity(1L)).thenReturn(new Organization());
+        when(employeeRepository.findAllByOrganizationIdAndDeletedAtIsNullOrderByIdDesc(1L))
+                .thenReturn(List.of(Employee.builder().id(2L).organizationId(1L).employeeCode("EMP-01")
+                        .fullName("A").status(EmployeeStatus.ACTIVE).build()));
+        assertThat(employeeService.getAll(1L)).singleElement()
+                .satisfies(employee -> assertThat(employee.organizationId()).isEqualTo(1L));
     }
 }

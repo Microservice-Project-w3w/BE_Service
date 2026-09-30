@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -38,6 +39,13 @@ public class EmployeeService {
         } catch (DataIntegrityViolationException exception) {
             throw new ConflictException("Mã nhân viên hoặc tài khoản đã tồn tại");
         }
+    }
+
+    @Transactional(readOnly = true)
+    public List<EmployeeResponse> getAll(Long organizationId) {
+        organizationService.getEntity(organizationId);
+        return employeeRepository.findAllByOrganizationIdAndDeletedAtIsNullOrderByIdDesc(organizationId)
+                .stream().map(this::toResponse).toList();
     }
 
     private EmployeeResponse toResponse(Employee employee) {

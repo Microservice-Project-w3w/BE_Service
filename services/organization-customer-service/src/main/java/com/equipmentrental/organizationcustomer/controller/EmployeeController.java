@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/organizations/{organizationId}/employees")
@@ -19,5 +20,10 @@ public class EmployeeController {
     public EmployeeResponse create(@PathVariable Long organizationId,
                                    @Valid @RequestBody EmployeeRequest request) {
         return employeeService.create(organizationId, request);
+    }
+
+    @GetMapping
+    public List<EmployeeResponse> getAll(@PathVariable Long organizationId) {
+        return employeeService.getAll(organizationId);
     }
 }
