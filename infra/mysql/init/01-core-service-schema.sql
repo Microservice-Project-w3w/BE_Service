@@ -68,6 +68,9 @@ CREATE TABLE IF NOT EXISTS users (
                        organization_id BIGINT NULL,
 
                        full_name VARCHAR(150) NOT NULL,
+                       phone VARCHAR(30) NULL,
+                       company_name VARCHAR(255) NULL,
+                       tax_code VARCHAR(50) NULL,
 
     -- Chỉ sử dụng địa chỉ Gmail
                        email VARCHAR(150) NOT NULL,
@@ -1555,6 +1558,7 @@ CREATE TABLE IF NOT EXISTS quotations (
     status VARCHAR(30) NOT NULL,
     valid_until DATETIME NOT NULL,
     special_terms VARCHAR(1000) NULL,
+    rejection_reason VARCHAR(500) NULL,
     INDEX idx_quotation_scope (organization_id, branch_id),
     CONSTRAINT chk_quotation_amounts CHECK (
         rental_amount >= 0 AND deposit_amount >= 0 AND delivery_fee >= 0
@@ -1576,6 +1580,7 @@ CREATE TABLE IF NOT EXISTS rental_orders (
     reserved_until DATETIME NULL,
     inventory_reservation_id VARCHAR(100) NULL,
     cancel_reason VARCHAR(500) NULL,
+    rejection_reason VARCHAR(500) NULL,
     INDEX idx_rental_order_scope (organization_id, branch_id),
     CONSTRAINT chk_rental_order_dates CHECK (end_at > start_at),
     CONSTRAINT chk_rental_order_total CHECK (total_amount >= 0)
@@ -1623,4 +1628,3 @@ CREATE TABLE IF NOT EXISTS contract_appendices (
     CONSTRAINT fk_contract_appendix_contract FOREIGN KEY (contract_id) REFERENCES rental_contracts(id),
     INDEX idx_contract_appendix_scope (organization_id, branch_id)
 );
-

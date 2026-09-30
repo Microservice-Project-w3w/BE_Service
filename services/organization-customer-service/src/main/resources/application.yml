@@ -10,7 +10,9 @@ spring:
     hibernate.ddl-auto: validate
     open-in-view: false
   flyway:
-    enabled: true
+    # Schema này được khởi tạo bởi infra/mysql/init/01-core-service-schema.sql.
+    # Không chạy lại V1 trên cùng database vì sẽ tạo trùng bảng.
+    enabled: false
     locations: classpath:db/migration
 security:
   jwt:
