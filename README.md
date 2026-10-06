@@ -174,34 +174,33 @@ curl http://localhost:8080/actuator/health
 
 ### AI service
 
-AI chạy từ project riêng `E:\equipment-rental-AI` (FastAPI), không chạy module Java `services/ai-service` trong repository này vì cả hai đều dùng port `8090`. Endpoint direct là `POST http://localhost:8090/api/v1/chat`; frontend gọi qua Gateway bằng `POST /api/v1/ai/chat`.
+AI chạy từ project riêng `E:\equipment-rental-AI` bằng PowerShell trên Windows; không chạy module Java `services/ai-service` trong repository này vì cả hai đều dùng port `8090`. Gateway chạy trong WSL tự tìm Windows host IP và chuyển `POST /api/v1/ai/chat` tới AI FastAPI.
 
-AI cần Gateway đang chạy tại `http://localhost:8080` để xác thực token qua Identity và lấy dữ liệu nghiệp vụ. Chỉ role `ADMIN` và `MANAGER` được dùng chat. AI chỉ gọi API qua Gateway, không truy cập trực tiếp database của các service Java.
+AI cần Gateway tại `http://localhost:8080` để xác thực token qua Identity và lấy dữ liệu nghiệp vụ. Chỉ role `ADMIN` và `MANAGER` được dùng chat. AI chỉ gọi API qua Gateway, không truy cập trực tiếp database của các service Java.
 
-Chạy trên WSL:
-
-```bash
-cd /mnt/e/equipment-rental-AI
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -e ".[test]"
-python run.py
-```
-
-Thiết lập trong file `E:\equipment-rental-AI\.env`:
+Trong `E:\equipment-rental-AI\.env` đặt:
 
 ```env
+APP_HOST=0.0.0.0
 APP_PORT=8090
 API_GATEWAY_BASE_URL=http://localhost:8080
-OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_BASE_URL=http://127.0.0.1:11434
 OLLAMA_MODEL=viet-tutor-frog
 ```
 
-Nếu máy chưa có model đã chọn, tải bằng:
+Chạy AI bằng PowerShell:
 
-```bash
-ollama pull viet-tutor-frog
+```powershell
+cd E:\equipment-rental-AI
+& .\.venv-win\Scripts\Activate.ps1
+python run.py
 ```
+
+Chạy các service Java bằng `./scripts/run-local-service.sh <service>` để script tự cập nhật `AI_SERVICE_URL` từ default route WSL khi Windows/WSL đổi IP. Không cần Docker Ollama nếu Ollama đã chạy trên Windows và đã có model đã chọn.
+
+Script sẽ tự cài ba module dùng chung (`common-web`, `common-security`, `event-contracts`) vào Maven local repository trước khi chạy service. Lần đầu có thể lâu hơn vì Maven tải dependency và compile.
+
+Không dùng `source .env` trực tiếp để chạy Java service: `DB_URL` có ký tự `&` và Bash có thể diễn giải sai. Luôn dùng script trên để nạp `.env` an toàn.
 
 ---
 
@@ -209,9 +208,29 @@ ollama pull viet-tutor-frog
 
 ```bash
 cp .env.example .env
-cd infra && docker compose up -d
-mvn -pl api-gateway spring-boot:run
-# AI chạy ở terminal khác: cd /mnt/e/equipment-rental-AI && python run.py
+docker compose --env-file .env -f infra/docker-compose.yml up -d
+./scripts/run-local-service.sh api-gateway
+# AI chạy ở PowerShell khác: cd E:\equipment-rental-AI ; python run.py
 ```
 
 Schema cũ của 4 service được giữ tại `infra/mysql/init/01-core-service-schema.sql`; role/permission seed gốc ở `services/identity-service/src/main/resources/security/` và `docs/security/`. Migration đặt trong đúng service: `src/main/resources/db/migration`. Khi bắt đầu viết entity, đổi `spring.flyway.enabled` sang `true`; không dùng `ddl-auto=update` trên môi trường chung.
+
+## Dữ liệu demo
+
+Sau khi MySQL đã chạy, hãy khởi động `identity-service` ít nhất một lần để role/permission gốc được tạo, rồi từ thư mục gốc chạy:
+
+```bash
+./scripts/load-demo-seed.sh
+```
+
+Lệnh này nạp lại được nhiều lần. Nó chỉ thêm hoặc làm mới các bản ghi có mã `DEMO-*` / email `rentai.demo.*@gmail.com`; không xóa dữ liệu nhóm đã tạo. Mỗi lần chạy sẽ đặt lại mật khẩu của năm tài khoản demo về `Demo@123`.
+
+| Đăng nhập | Vai trò | Dùng để demo |
+|---|---|---|
+| `rentai.demo.admin@gmail.com` | Admin | tài khoản, tổ chức, chi nhánh, danh mục |
+| `rentai.demo.manager@gmail.com` | Manager | duyệt báo giá, đơn thuê, hợp đồng, AI chat |
+| `rentai.demo.sales@gmail.com` | Sales | khách hàng, yêu cầu thuê và báo giá |
+| `rentai.demo.operations@gmail.com` | Operations | thiết bị, kho, giữ chỗ, nhập/xuất/chuyển/kiểm kê |
+| `rentai.demo.customer@gmail.com` | Customer | dữ liệu khách hàng mẫu (customer portal đang ẩn ở MVP) |
+
+Seed tạo một tổ chức, hai chi nhánh, hai khách hàng, danh mục/kho/bốn thiết bị với các trạng thái sẵn sàng–giữ chỗ–bảo dưỡng, cùng luồng thuê có yêu cầu mới, báo giá chờ duyệt, đơn đã giữ chỗ, hợp đồng chờ duyệt và hợp đồng đang hiệu lực.
