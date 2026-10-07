@@ -206,31 +206,107 @@ Không dùng `source .env` trực tiếp để chạy Java service: `DB_URL` có
 
 ## Cách chạy chung
 
+Các lệnh dưới đây chạy trong WSL/Linux, từ folder `backend_microservice`. Máy cần Java 21, Maven và Docker Compose. Chưa cần bật AI để thử đăng nhập, khách hàng, thiết bị/kho và luồng thuê.
+
+### 1. Chuẩn bị `.env` và MySQL
+
 ```bash
-cp .env.example .env
-docker compose --env-file .env -f infra/docker-compose.yml up -d
-./scripts/run-local-service.sh api-gateway
-# AI chạy ở PowerShell khác: cd E:\equipment-rental-AI ; python run.py
+cd ~/backend_microservice
+# Chỉ copy lần đầu; giữ .env đã cấu hình nếu file đã có.
+test -f .env || cp .env.example .env
+
+# Sinh JWT secret, rồi copy kết quả vào JWT_SECRET_BASE64 trong .env.
+openssl rand -base64 32
 ```
 
-Schema cũ của 4 service được giữ tại `infra/mysql/init/01-core-service-schema.sql`; role/permission seed gốc ở `services/identity-service/src/main/resources/security/` và `docs/security/`. Migration đặt trong đúng service: `src/main/resources/db/migration`. Khi bắt đầu viết entity, đổi `spring.flyway.enabled` sang `true`; không dùng `ddl-auto=update` trên môi trường chung.
+Mở `.env` và kiểm tra:
+
+- `JWT_SECRET_BASE64`: thay dòng placeholder bằng secret vừa sinh. Tất cả service trên cùng máy dùng chung file `.env` này.
+- `MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD`, `DB_PASSWORD`: phải khớp mật khẩu MySQL đang dùng.
+- `MYSQL_PORT`: mặc định bản demo là `3307`, tránh trùng MySQL local ở `3306`. Nếu đổi port, sửa cả port trong `DB_URL`.
+- Giữ nguyên tên database: `identity_db`, `organization_customer_db`, `inventory_db`, `rental_db`.
+- `MAIL_USERNAME`/`MAIL_PASSWORD` có thể để trống khi chỉ thử bằng tài khoản demo, không gửi email.
+
+Không commit `.env` hay mật khẩu SMTP/JWT thật. `.env.example` là mẫu cấu hình để mọi người tự tạo `.env` trên máy mình. Không dùng `source .env`; script chạy service sẽ nạp file này an toàn.
+
+```bash
+docker compose --env-file .env -f infra/docker-compose.yml up -d
+docker compose --env-file .env -f infra/docker-compose.yml ps
+```
+
+Chờ service `mysql` hiện `healthy`. Lệnh trên không bật Ollama/AI vì không dùng `--profile ai`.
+
+Schema bốn database nằm trong `infra/mysql/init/01-core-service-schema.sql`. MySQL tự nạp schema khi tạo volume trống **lần đầu**, không tự nạp lại khi `git pull` hoặc restart container. Seed bên dưới chỉ nạp dữ liệu, không thay thế việc tạo schema. Nếu đang dùng volume cũ mà báo thiếu bảng/cột, kiểm tra schema/migration trước; **không chạy `docker compose down -v` để chữa lỗi** vì sẽ xóa dữ liệu.
 
 ## Dữ liệu demo
 
-Sau khi MySQL đã chạy, hãy khởi động `identity-service` ít nhất một lần để role/permission gốc được tạo, rồi từ thư mục gốc chạy:
+### 2. Khởi động Identity trước
+
+Trong terminal thứ nhất:
 
 ```bash
-./scripts/load-demo-seed.sh
+cd ~/backend_microservice
+bash scripts/run-local-service.sh identity-service
 ```
 
-Lệnh này nạp lại được nhiều lần. Nó chỉ thêm hoặc làm mới các bản ghi có mã `DEMO-*` / email `rentai.demo.*@gmail.com`; không xóa dữ liệu nhóm đã tạo. Mỗi lần chạy sẽ đặt lại mật khẩu của năm tài khoản demo về `Demo@123`.
+Chờ log `Started IdentityServiceApplication`, giữ terminal này chạy. Identity tự nạp role/permission từ `services/identity-service/src/main/resources/security/`; script cũng tự cài các module Maven dùng chung, không cần build từng thư viện bằng tay.
+
+### 3. Nạp seed
+
+Mở terminal thứ hai:
+
+```bash
+cd ~/backend_microservice
+bash scripts/load-demo-seed.sh
+```
+
+Thành công sẽ hiện `Demo data loaded. Demo account password: Demo@123`.
+
+Script đọc cấu hình MySQL từ `.env`, dùng container `mysql` trong Compose và nạp đúng thứ tự sau; không cần cài thêm MySQL client trên WSL hoặc chạy từng file SQL bằng tay:
+
+| File trong `infra/mysql/seed/` | Dữ liệu |
+|---|---|
+| `01-organization-customer-demo.sql` | Tổ chức, hai chi nhánh, nhân viên, hai khách hàng |
+| `02-identity-demo.sql` | Năm tài khoản demo và phạm vi chi nhánh |
+| `03-organization-customer-assignments-demo.sql` | Liên kết user với nhân viên/khách hàng và phân công chi nhánh |
+| `04-inventory-demo.sql` | Danh mục, brand/type/model, kho, bốn thiết bị, reservation và phiếu kho/kiểm kê |
+| `05-rental-demo.sql` | Giá thuê, mã giảm giá, yêu cầu thuê, báo giá, đơn thuê, hợp đồng và phụ lục |
+
+**Chỉ dùng seed trên database dev/demo.** Có thể chạy lại, nhưng mỗi lần chạy sẽ cập nhật dữ liệu mẫu: mật khẩu về `Demo@123`, trạng thái về trạng thái seed và thời gian thuê/giữ chỗ được làm mới. Vì vậy các thao tác đã thử trên bản ghi demo có thể bị đặt lại. Script không xóa/truncate database; nếu cần giữ trạng thái demo đang làm thì không nạp lại. Nên seed trước khi bật Inventory/Rental, tránh thao tác hoặc job giữ chỗ chạy đồng thời.
+
+### 4. Bật các service còn lại và đăng nhập frontend
+
+Giữ Identity chạy. Mở thêm bốn terminal tại folder `backend_microservice`, **mỗi terminal chạy một lệnh**, không paste cả khối vào cùng một terminal:
+
+```bash
+bash scripts/run-local-service.sh organization-customer-service
+bash scripts/run-local-service.sh inventory-service
+bash scripts/run-local-service.sh rental-service
+bash scripts/run-local-service.sh api-gateway
+```
+
+Chờ từng service báo `Started ...Application`, sau đó mở frontend đã chạy bằng `npm run dev` (mặc định `http://localhost:5173`). Frontend gọi Gateway ở `http://localhost:8080`, không gọi trực tiếp port của từng service. Sau khi đổi role/quyền hoặc seed lại, đăng xuất và đăng nhập lại để nhận token mới.
+
+Mật khẩu chung cho cả năm tài khoản: **`Demo@123`**.
 
 | Đăng nhập | Vai trò | Dùng để demo |
 |---|---|---|
 | `rentai.demo.admin@gmail.com` | Admin | tài khoản, tổ chức, chi nhánh, danh mục |
 | `rentai.demo.manager@gmail.com` | Manager | duyệt báo giá, đơn thuê, hợp đồng, AI chat |
 | `rentai.demo.sales@gmail.com` | Sales | khách hàng, yêu cầu thuê và báo giá |
-| `rentai.demo.operations@gmail.com` | Operations | thiết bị, kho, giữ chỗ, nhập/xuất/chuyển/kiểm kê |
+| `rentai.demo.operations@gmail.com` | Operations | thiết bị, kho, nhập/xuất/chuyển/kiểm kê |
 | `rentai.demo.customer@gmail.com` | Customer | dữ liệu khách hàng mẫu (customer portal đang ẩn ở MVP) |
 
 Seed tạo một tổ chức, hai chi nhánh, hai khách hàng, danh mục/kho/bốn thiết bị với các trạng thái sẵn sàng–giữ chỗ–bảo dưỡng, cùng luồng thuê có yêu cầu mới, báo giá chờ duyệt, đơn đã giữ chỗ, hợp đồng chờ duyệt và hợp đồng đang hiệu lực.
+
+Luồng thử đầy đủ: Operations chuẩn bị thiết bị → Sales tạo yêu cầu/báo giá → Manager duyệt → Sales ghi nhận khách chấp nhận và chuyển thành đơn → Manager giữ chỗ, xác nhận giữ chỗ → Sales tạo hợp đồng → Manager duyệt → Sales ghi nhận đã ký. Gia hạn làm trên hợp đồng qua phụ lục duyệt/ký, không gia hạn trực tiếp đơn thuê.
+
+### Nếu seed chưa chạy được
+
+- `Missing .../.env`: tạo `.env` từ `.env.example`, điền cấu hình như bước 1.
+- `Identity role seed is missing`: khởi động Identity và chờ startup hoàn tất trước khi chạy lại seed.
+- `service "mysql" is not running`: chạy Compose ở bước 1, chờ MySQL healthy.
+- `Access denied`: kiểm tra `.env` có đúng mật khẩu của **volume MySQL hiện có** không. Đổi mật khẩu trong `.env` không tự đổi mật khẩu database trong volume cũ.
+- `Table ... doesn't exist` hoặc `Unknown column`: kiểm tra schema/migration của database đang dùng; không xóa volume hay nạp seed liên tục để sửa lỗi schema.
+
+Khi đưa lên Git, giữ đủ `.env.example`, `infra/mysql/init/`, `infra/mysql/seed/`, `scripts/load-demo-seed.sh` và `scripts/run-local-service.sh`. Các file này đã có trong repo; người kéo code chỉ cần cấu hình `.env` riêng rồi làm theo thứ tự trên. AI là phần tùy chọn, cách chạy riêng ở mục AI service phía trên.

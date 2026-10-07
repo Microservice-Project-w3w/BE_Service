@@ -42,6 +42,7 @@ public class RentalWorkflowService {
     private final PricingService pricing;
     private final RentalDataScopeGuard dataScopeGuard;
     private final InventoryClient inventoryClient;
+    private final com.equipmentrental.rental.repository.RentalContractRepository contracts;
 
     public RentalWorkflowService(
             RentalRequestRepository requests,
@@ -49,13 +50,15 @@ public class RentalWorkflowService {
             RentalOrderRepository orders,
             PricingService pricing,
             RentalDataScopeGuard dataScopeGuard,
-            InventoryClient inventoryClient) {
+            InventoryClient inventoryClient,
+            com.equipmentrental.rental.repository.RentalContractRepository contracts) {
         this.requests = requests;
         this.quotations = quotations;
         this.orders = orders;
         this.pricing = pricing;
         this.dataScopeGuard = dataScopeGuard;
         this.inventoryClient = inventoryClient;
+        this.contracts = contracts;
     }
 
     public RentalRequestResponse createRequest(RentalRequestCreate r) {
@@ -285,6 +288,10 @@ public class RentalWorkflowService {
     public RentalOrderResponse cancelOrder(Long id, CancelOrderRequest r) {
         RentalOrder o = findOrder(id);
         if (o.getStatus() == OrderStatus.CANCELLED) throw ApiException.invalidStatus("Đơn đã bị hủy");
+        if (contracts.existsByRentalOrderIdAndStatusNotIn(id, List.of(
+                com.equipmentrental.rental.entity.ContractStatus.CANCELLED,
+                com.equipmentrental.rental.entity.ContractStatus.REJECTED)))
+            throw ApiException.invalidStatus("Cần xử lý hợp đồng trước khi hủy đơn thuê");
         if (o.getInventoryReservationId() != null) inventoryClient.releaseReservation(o.getInventoryReservationId(), r.reason());
         o.setStatus(OrderStatus.CANCELLED);
         o.setCancelReason(r.reason());

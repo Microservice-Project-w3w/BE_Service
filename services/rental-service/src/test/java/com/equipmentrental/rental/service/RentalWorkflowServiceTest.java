@@ -52,7 +52,8 @@ class RentalWorkflowServiceTest {
                 guard);
         InventoryClient inventory = new InventoryClient("http://localhost");
         RentalWorkflowService service =
-                new RentalWorkflowService(requests, quotations, orders, pricing, guard, inventory);
+                new RentalWorkflowService(requests, quotations, orders, pricing, guard, inventory,
+                        repository(com.equipmentrental.rental.repository.RentalContractRepository.class, null));
         authenticateManager();
 
         assertThatThrownBy(() -> service.acceptQuotation(10L))
