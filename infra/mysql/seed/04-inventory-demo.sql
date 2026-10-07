@@ -209,6 +209,6 @@ INSERT INTO stock_audit_items (
   actual_location_id, result, note, checked_by, checked_at
 )
 SELECT @demo_audit_id, @demo_cam_one_id, @demo_hn_warehouse_id, @demo_camera_location_id,
-       @demo_hn_warehouse_id, @demo_camera_location_id, 'MATCHED', 'Khớp tồn kho.', @demo_operations_user_id, NOW()
+       @demo_hn_warehouse_id, @demo_camera_location_id, 'FOUND', 'Khớp tồn kho.', @demo_operations_user_id, NOW()
 FROM DUAL
 WHERE NOT EXISTS (SELECT 1 FROM stock_audit_items WHERE stock_audit_id = @demo_audit_id AND equipment_id = @demo_cam_one_id);

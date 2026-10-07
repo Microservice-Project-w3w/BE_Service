@@ -84,6 +84,13 @@ public class InventoryClient {
     public void confirmReservation(String reservationId) {
         postWithoutBody("/internal/reservations/" + reservationId + "/confirm");
     }
+    public void extendReservation(String reservationId, LocalDateTime newEndAt) {
+        try {
+            restClient.post().uri("/internal/reservations/" + reservationId + "/extend")
+                    .headers(this::forwardBearerToken).contentType(MediaType.APPLICATION_JSON)
+                    .body(java.util.Map.of("newEndAt", newEndAt)).retrieve().toBodilessEntity();
+        } catch (RestClientException exception) { throw unavailable(exception); }
+    }
 
     public void releaseReservation(String reservationId, String reason) {
         try {

@@ -16,6 +16,10 @@
   <artifactId>inventory-service</artifactId>
 
   <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-aop</artifactId>
+    </dependency>
         <dependency>
       <groupId>com.equipmentrental</groupId>
       <artifactId>common-web</artifactId>

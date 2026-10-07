@@ -28,20 +28,21 @@ public class InventorySecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, "/internal/reservations").hasAuthority("inventory.reservation.create")
                         .requestMatchers(HttpMethod.POST, "/internal/reservations/*/confirm").hasAuthority("inventory.reservation.confirm")
                         .requestMatchers(HttpMethod.POST, "/internal/reservations/*/release").hasAuthority("inventory.reservation.release")
+                        .requestMatchers(HttpMethod.POST, "/internal/reservations/*/extend").hasAnyAuthority("rental.contract.update", "rental.contract.sign")
                         .requestMatchers("/internal/equipment/*/checkin", "/internal/equipment/*/checkout")
                         .hasAuthority("inventory.equipment.change-status")
-                        .requestMatchers(HttpMethod.GET, "/api/v1/inventory/categories/**", "/api/v1/inventory/types/**",
+                        .requestMatchers(HttpMethod.GET, "/api/v1/inventory/categories/**", "/api/v1/inventory/equipment-types/**",
                                 "/api/v1/inventory/brands/**", "/api/v1/inventory/models/**").hasAuthority("inventory.catalog.read")
-                        .requestMatchers("/api/v1/inventory/categories/**", "/api/v1/inventory/types/**",
+                        .requestMatchers("/api/v1/inventory/categories/**", "/api/v1/inventory/equipment-types/**",
                                 "/api/v1/inventory/brands/**", "/api/v1/inventory/models/**").hasAuthority("inventory.catalog.manage")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/inventory/equipment/*/accessories/**").hasAuthority("inventory.equipment.read")
+                        .requestMatchers("/api/v1/inventory/equipment/*/accessories/**").hasAuthority("inventory.equipment.accessory.manage")
                         .requestMatchers(HttpMethod.GET, "/api/v1/inventory/equipment/**").hasAuthority("inventory.equipment.read")
                         .requestMatchers(HttpMethod.POST, "/api/v1/inventory/equipment").hasAuthority("inventory.equipment.create")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/inventory/equipment/**").hasAuthority("inventory.equipment.update")
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/inventory/equipment/*/status").hasAuthority("inventory.equipment.change-status")
                         .requestMatchers(HttpMethod.GET, "/api/v1/inventory/equipment-images/**").hasAuthority("inventory.equipment.read")
                         .requestMatchers("/api/v1/inventory/equipment-images/**").hasAuthority("inventory.equipment.image.manage")
-                        .requestMatchers(HttpMethod.GET, "/api/v1/inventory/equipment/*/accessories/**").hasAuthority("inventory.equipment.read")
-                        .requestMatchers("/api/v1/inventory/equipment/*/accessories/**").hasAuthority("inventory.equipment.accessory.manage")
                         .requestMatchers(HttpMethod.GET, "/api/v1/inventory/warehouses/**").hasAuthority("inventory.warehouse.read")
                         .requestMatchers("/api/v1/inventory/warehouses/**").hasAuthority("inventory.warehouse.manage")
                         .requestMatchers("/api/v1/inventory/stock-in/**").hasAuthority("inventory.stock.in")

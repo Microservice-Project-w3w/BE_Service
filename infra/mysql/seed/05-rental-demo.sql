@@ -19,6 +19,10 @@ SET @demo_camera_type_id := (
 SET @demo_manager_user_id := (
   SELECT id FROM identity_db.users WHERE email = 'rentai.demo.manager@gmail.com' LIMIT 1
 );
+SET @demo_inventory_reservation_id := (
+  SELECT id FROM inventory_db.equipment_reservations
+  WHERE organization_id = @demo_organization_id AND reservation_code = 'DEMO-HOLD-001' LIMIT 1
+);
 
 INSERT INTO rental_prices (
   price_name, organization_id, branch_id, equipment_type_id, rental_unit, rental_price,
@@ -110,7 +114,7 @@ INSERT INTO rental_orders (
   total_amount, status, reserved_until, inventory_reservation_id
 ) VALUES
   (@demo_organization_id, @demo_hn_branch_id, 'ORD-DEMO-RESERVED', @demo_quote_order_id, @demo_business_customer_id,
-   DATE_ADD(NOW(), INTERVAL 7 DAY), DATE_ADD(NOW(), INTERVAL 10 DAY), 5600000, 'RESERVED', DATE_ADD(NOW(), INTERVAL 2 DAY), 'DEMO-HOLD-001'),
+   DATE_ADD(NOW(), INTERVAL 7 DAY), DATE_ADD(NOW(), INTERVAL 10 DAY), 5600000, 'RESERVED', DATE_ADD(NOW(), INTERVAL 2 DAY), CAST(@demo_inventory_reservation_id AS CHAR)),
   (@demo_organization_id, @demo_hn_branch_id, 'ORD-DEMO-ACTIVE', @demo_quote_active_id, @demo_business_customer_id,
    DATE_SUB(NOW(), INTERVAL 1 DAY), DATE_ADD(NOW(), INTERVAL 2 DAY), 6050000, 'CONFIRMED', NULL, NULL)
 ON DUPLICATE KEY UPDATE

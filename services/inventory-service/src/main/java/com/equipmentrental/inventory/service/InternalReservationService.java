@@ -32,6 +32,43 @@ public class InternalReservationService {
     private final EquipmentReservationItemRepository itemRepository;
     private final EquipmentRepository equipmentRepository;
     private final EquipmentModelRepository equipmentModelRepository;
+    @org.springframework.beans.factory.annotation.Value("${RENTAL_SERVICE_URL:http://localhost:8084}")
+    private String rentalBaseUrl;
+
+    @Transactional
+    public EquipmentReservationResponse extend(Long id, LocalDateTime newEndAt) {
+        EquipmentReservation reservation = reservationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Reservation not found: " + id));
+        if (reservation.getStatus() != ReservationStatus.CONFIRMED)
+            throw new IllegalStateException("Chỉ gia hạn được giữ chỗ đã xác nhận");
+        // A customer may only extend their own order, not any reservation in their branch.
+        var authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (authentication instanceof org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken jwt
+                && jwt.getToken().getClaimAsStringList("roles") != null
+                && jwt.getToken().getClaimAsStringList("roles").contains("CUSTOMER")) {
+            org.springframework.web.client.RestClient.create(rentalBaseUrl).get()
+                    .uri("/api/v1/rental-orders/" + reservation.getRentalOrderId())
+                    .headers(headers -> headers.setBearerAuth(jwt.getToken().getTokenValue())).retrieve().toBodilessEntity();
+        }
+        if (newEndAt == null || newEndAt.isBefore(reservation.getEndAt()))
+            throw new IllegalArgumentException("Ngày kết thúc gia hạn không được trước ngày hiện tại");
+        if (newEndAt.equals(reservation.getEndAt())) return toResponse(reservation); // Safe retry after a remote commit.
+        List<EquipmentReservationItem> items = itemRepository.findByReservationId(id);
+        if (items.isEmpty()) throw new IllegalStateException("Giữ chỗ không có thiết bị");
+        for (var equipmentId : items.stream().map(EquipmentReservationItem::getEquipmentId).sorted().toList())
+            getEquipment(equipmentId, reservation.getOrganizationId());
+        for (var item : items) {
+            var blocking = itemRepository.findBlockingItems(reservation.getOrganizationId(), reservation.getBranchId(),
+                    item.getEquipmentTypeId(), List.of(item.getEquipmentId()), List.of(ReservationStatus.HELD, ReservationStatus.CONFIRMED),
+                    reservation.getEndAt(), newEndAt, LocalDateTime.now());
+            if (blocking.stream().anyMatch(other -> !id.equals(other.getReservationId())))
+                throw new IllegalStateException("Thiết bị đã có giữ chỗ khác trong thời gian gia hạn");
+        }
+        reservation.setEndAt(newEndAt); reservationRepository.save(reservation);
+        for (var item : items) item.setEndAt(newEndAt);
+        itemRepository.saveAll(items);
+        return toResponse(reservation);
+    }
 
     // =====================================================
     // CREATE RESERVATION
@@ -73,6 +110,8 @@ public class InternalReservationService {
          * VALIDATE TOÀN BỘ EQUIPMENT TRƯỚC
          * =====================================================
          */
+        for (var equipmentId : request.items().stream().map(CreateInternalReservationItemRequest::equipmentId).sorted().toList())
+            getEquipment(equipmentId, request.organizationId());
         for (CreateInternalReservationItemRequest item
                 : request.items()) {
 
@@ -452,7 +491,7 @@ public class InternalReservationService {
     ) {
 
         return equipmentRepository
-                .findByIdAndOrganizationId(
+                .lockForReservation(
                         equipmentId,
                         organizationId
                 )

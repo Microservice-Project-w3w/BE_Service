@@ -32,16 +32,19 @@ public class ContractService {
     private final ContractAppendixRepository appendices;
     private final RentalOrderRepository orders;
     private final RentalDataScopeGuard dataScopeGuard;
+    private final com.equipmentrental.rental.client.InventoryClient inventoryClient;
 
     public ContractService(
             RentalContractRepository contracts,
             ContractAppendixRepository appendices,
             RentalOrderRepository orders,
-            RentalDataScopeGuard dataScopeGuard) {
+            RentalDataScopeGuard dataScopeGuard,
+            com.equipmentrental.rental.client.InventoryClient inventoryClient) {
         this.contracts = contracts;
         this.appendices = appendices;
         this.orders = orders;
         this.dataScopeGuard = dataScopeGuard;
+        this.inventoryClient = inventoryClient;
     }
 
     public RentalContractResponse create(ContractCreateRequest request) {
@@ -159,6 +162,7 @@ public class ContractService {
 
     public ContractAppendixResponse approveAppendix(Long id) {
         ContractAppendix appendix = appendix(id);
+        requireActiveContract(contract(appendix.getContractId()));
         if (appendix.getStatus() != AppendixStatus.PENDING_APPROVAL)
             throw ApiException.invalidStatus("Phụ lục chưa ở trạng thái chờ phê duyệt");
         appendix.approve();
@@ -170,13 +174,29 @@ public class ContractService {
         if (appendix.getStatus() != AppendixStatus.APPROVED)
             throw ApiException.invalidStatus("Phụ lục chưa được phê duyệt");
         RentalContract contract = contract(appendix.getContractId());
+        requireActiveContract(contract);
         appendix.sign();
         if (appendix.getAppendixType() == AppendixType.EXTENSION) {
+            if (!appendix.getNewEndAt().isAfter(contract.getEndAt()))
+                throw new ApiException("Phụ lục không được rút ngắn thời hạn đã gia hạn");
+            RentalOrder order = orders.findById(contract.getRentalOrderId())
+                    .orElseThrow(() -> ApiException.notFound("Không tìm thấy đơn thuê"));
+            if (order.getStatus() != OrderStatus.CONFIRMED)
+                throw ApiException.invalidStatus("Không thể gia hạn đơn thuê chưa xác nhận hoặc đã hủy");
+            if (order.getInventoryReservationId() != null)
+                inventoryClient.extendReservation(order.getInventoryReservationId(), appendix.getNewEndAt());
+            order.setEndAt(appendix.getNewEndAt()); orders.save(order);
             contract.setEndAt(appendix.getNewEndAt());
             contract.setStatus(ContractStatus.EXTENDED);
             contracts.save(contract);
         }
         return RentalResponseMapper.appendix(appendices.save(appendix));
+    }
+
+    private void requireActiveContract(RentalContract contract) {
+        if (contract.getStatus() != ContractStatus.SIGNED && contract.getStatus() != ContractStatus.ACTIVE
+                && contract.getStatus() != ContractStatus.EXTENDED)
+            throw ApiException.invalidStatus("Chỉ xử lý phụ lục của hợp đồng đang hiệu lực");
     }
 
     private RentalContract contract(Long id) {

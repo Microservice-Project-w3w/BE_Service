@@ -1,6 +1,7 @@
 package com.equipmentrental.identity.service;
 
 import com.equipmentrental.identity.dto.request.AdminCreateUserRequest;
+import com.equipmentrental.identity.dto.request.AdminUpdateUserRequest;
 import com.equipmentrental.identity.dto.response.UserResponse;
 import com.equipmentrental.identity.entity.Role;
 import com.equipmentrental.identity.entity.User;
@@ -10,6 +11,8 @@ import com.equipmentrental.identity.repository.UserRepository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
+import java.util.Objects;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -36,13 +39,14 @@ public class IdentityManagementService {
 
     @Transactional(readOnly = true)
     public List<UserResponse> list() {
-        return users.findAll().stream().map(this::toResponse).toList();
+        return users.findAll().stream().filter(user -> user.getStatus() != UserStatus.DELETED).map(this::toResponse).toList();
     }
 
     @Transactional(readOnly = true)
     public UserResponse get(Long id) { return toResponse(user(id)); }
 
     public UserResponse create(AdminCreateUserRequest request, Long actorUserId) {
+        validateScope(request.roleCode(), request.organizationId(), request.branchIds(), request.status());
         String email = request.email().trim().toLowerCase(Locale.ROOT);
         if (users.existsByEmailIgnoreCase(email)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email đã được sử dụng");
@@ -50,6 +54,7 @@ public class IdentityManagementService {
         User user = new User();
         user.setFullName(request.fullName().trim());
         user.setEmail(email);
+        user.setPhone(request.phone() == null ? null : request.phone().trim());
         user.setPasswordHash(passwordEncoder.encode(request.password()));
         user.setRole(role(request.roleCode()));
         user.setOrganizationId(request.organizationId());
@@ -62,6 +67,44 @@ public class IdentityManagementService {
         User saved = users.save(user);
         auditLogs.record(actorUserId, "CREATE_ACCOUNT", "USER", saved.getId(), "{\"email\":\"" + email + "\"}");
         return toResponse(saved);
+    }
+
+    public UserResponse update(Long id, AdminUpdateUserRequest request, Long actorUserId) {
+        validateScope(request.roleCode(), request.organizationId(), request.branchIds(), request.status());
+        User user = user(id);
+        Role selectedRole = role(request.roleCode());
+        if (id.equals(actorUserId) && (!selectedRole.getCode().equals(user.getRole().getCode())
+                || request.status() != UserStatus.ACTIVE)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Không thể tự đổi role hoặc vô hiệu hóa tài khoản đang đăng nhập");
+        }
+        String email = request.email().trim().toLowerCase(Locale.ROOT);
+        if (!email.equalsIgnoreCase(user.getEmail()) && users.existsByEmailIgnoreCase(email))
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email đã được sử dụng");
+        boolean accessChanged = !selectedRole.getCode().equals(user.getRole().getCode())
+                || !Objects.equals(request.organizationId(), user.getOrganizationId())
+                || !Objects.equals(request.branchIds(), user.getBranchIds()) || request.status() != user.getStatus();
+        boolean emailChanged = !email.equalsIgnoreCase(user.getEmail());
+        user.setFullName(request.fullName().trim());
+        user.setEmail(email);
+        user.setPhone(request.phone() == null ? null : request.phone().trim());
+        user.setRole(selectedRole);
+        user.setOrganizationId(request.organizationId());
+        user.setBranchIds(request.branchIds());
+        user.setStatus(request.status());
+        if (request.status() == UserStatus.ACTIVE) { user.setLockedUntil(null); user.setFailedLoginAttempts(0); }
+        user.setUpdatedBy(user(actorUserId));
+        if (accessChanged || emailChanged) sessions.revokeAllForUser(id, "ADMIN_ACCOUNT_UPDATED");
+        auditLogs.record(actorUserId, "UPDATE_ACCOUNT", "USER", id, "{}");
+        return toResponse(users.save(user));
+    }
+
+    private void validateScope(String roleCode, Long organizationId, Set<Long> branchIds, UserStatus status) {
+        if (status == UserStatus.DELETED) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Dùng thao tác xóa tài khoản riêng");
+        if ((organizationId != null && organizationId <= 0) || (branchIds != null && branchIds.stream().anyMatch(id -> id == null || id <= 0))
+                || (organizationId == null && branchIds != null && !branchIds.isEmpty()))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Organization/chi nhánh không hợp lệ");
+        if (!"ADMIN".equalsIgnoreCase(roleCode) && (organizationId == null || branchIds == null || branchIds.isEmpty()))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tài khoản nghiệp vụ cần organization và ít nhất một chi nhánh");
     }
 
     public UserResponse updateRole(Long id, String roleCode, Long actorUserId) {

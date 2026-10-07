@@ -6,6 +6,7 @@ import com.equipmentrental.rental.dto.request.CancelContractRequest;
 import com.equipmentrental.rental.dto.request.ContractCreateRequest;
 import com.equipmentrental.rental.dto.request.ContractExtensionRequest;
 import com.equipmentrental.rental.dto.request.RejectContractRequest;
+import com.equipmentrental.rental.dto.request.CustomerConfirmationRequest;
 import com.equipmentrental.rental.dto.response.ContractAppendixResponse;
 import com.equipmentrental.rental.dto.response.RentalContractResponse;
 import com.equipmentrental.rental.service.ContractService;
@@ -64,6 +65,13 @@ public class ContractController {
         return ApiResponse.success(service.reject(id, request));
     }
 
+    @PatchMapping("/{id}/record-signature")
+    @PreAuthorize("hasAuthority('rental.contract.update')")
+    public ApiResponse<RentalContractResponse> recordSignature(@PathVariable Long id,
+            @Valid @RequestBody CustomerConfirmationRequest request) {
+        return ApiResponse.success(service.sign(id));
+    }
+
     @PatchMapping("/{id}/sign")
     @PreAuthorize("hasAuthority('rental.contract.sign')")
     public ApiResponse<RentalContractResponse> sign(@PathVariable Long id) {
@@ -107,6 +115,13 @@ public class ContractController {
     @PreAuthorize("hasAuthority('rental.contract.approve')")
     public ApiResponse<ContractAppendixResponse> approveAppendix(@PathVariable Long id) {
         return ApiResponse.success(service.approveAppendix(id));
+    }
+
+    @PatchMapping("/appendices/{id}/record-signature")
+    @PreAuthorize("hasAuthority('rental.contract.update')")
+    public ApiResponse<ContractAppendixResponse> recordAppendixSignature(@PathVariable Long id,
+            @Valid @RequestBody CustomerConfirmationRequest request) {
+        return ApiResponse.success(service.signAppendix(id));
     }
 
     @PatchMapping("/appendices/{id}/sign")

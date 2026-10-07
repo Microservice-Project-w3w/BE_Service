@@ -42,6 +42,7 @@ public class RentalWorkflowService {
     private final PricingService pricing;
     private final RentalDataScopeGuard dataScopeGuard;
     private final InventoryClient inventoryClient;
+    private final com.equipmentrental.rental.repository.RentalContractRepository contracts;
 
     public RentalWorkflowService(
             RentalRequestRepository requests,
@@ -49,13 +50,15 @@ public class RentalWorkflowService {
             RentalOrderRepository orders,
             PricingService pricing,
             RentalDataScopeGuard dataScopeGuard,
-            InventoryClient inventoryClient) {
+            InventoryClient inventoryClient,
+            com.equipmentrental.rental.repository.RentalContractRepository contracts) {
         this.requests = requests;
         this.quotations = quotations;
         this.orders = orders;
         this.pricing = pricing;
         this.dataScopeGuard = dataScopeGuard;
         this.inventoryClient = inventoryClient;
+        this.contracts = contracts;
     }
 
     public RentalRequestResponse createRequest(RentalRequestCreate r) {
@@ -197,7 +200,7 @@ public class RentalWorkflowService {
 
     public QuotationResponse approveQuotation(Long id) {
         Quotation q = findQuotation(id);
-        if (q.getStatus() != QuotationStatus.SENT)
+        if (q.getStatus() != QuotationStatus.SENT && q.getStatus() != QuotationStatus.PENDING_APPROVAL)
             throw ApiException.invalidStatus("Chỉ phê duyệt được báo giá đã gửi");
         q.setStatus(QuotationStatus.APPROVED);
         return RentalResponseMapper.quotation(quotations.save(q));
@@ -213,7 +216,7 @@ public class RentalWorkflowService {
 
     public QuotationResponse rejectQuotation(Long id, String reason) {
         Quotation q = findQuotation(id);
-        if (q.getStatus() != QuotationStatus.SENT && q.getStatus() != QuotationStatus.APPROVED)
+        if (q.getStatus() != QuotationStatus.SENT && q.getStatus() != QuotationStatus.PENDING_APPROVAL && q.getStatus() != QuotationStatus.APPROVED)
             throw ApiException.invalidStatus("Báo giá không thể từ chối ở trạng thái hiện tại");
         q.setStatus(QuotationStatus.REJECTED);
         q.setRejectionReason(reason.trim());
@@ -285,6 +288,10 @@ public class RentalWorkflowService {
     public RentalOrderResponse cancelOrder(Long id, CancelOrderRequest r) {
         RentalOrder o = findOrder(id);
         if (o.getStatus() == OrderStatus.CANCELLED) throw ApiException.invalidStatus("Đơn đã bị hủy");
+        if (contracts.existsByRentalOrderIdAndStatusNotIn(id, List.of(
+                com.equipmentrental.rental.entity.ContractStatus.CANCELLED,
+                com.equipmentrental.rental.entity.ContractStatus.REJECTED)))
+            throw ApiException.invalidStatus("Cần xử lý hợp đồng trước khi hủy đơn thuê");
         if (o.getInventoryReservationId() != null) inventoryClient.releaseReservation(o.getInventoryReservationId(), r.reason());
         o.setStatus(OrderStatus.CANCELLED);
         o.setCancelReason(r.reason());

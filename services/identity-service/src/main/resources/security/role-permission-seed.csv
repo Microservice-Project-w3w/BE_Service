@@ -150,8 +150,10 @@ MANAGER,rental.quotation.read,BRANCH
 MANAGER,rental.quotation.approve,BRANCH
 MANAGER,rental.quotation.reject,BRANCH
 MANAGER,rental.order.read,BRANCH
+MANAGER,rental.order.cancel,BRANCH
 MANAGER,rental.contract.read,BRANCH
 MANAGER,rental.contract.approve,BRANCH
+MANAGER,rental.contract.extend,BRANCH
 MANAGER,logistics.delivery.read,BRANCH
 MANAGER,logistics.handover.read,BRANCH
 MANAGER,logistics.return-request.read,BRANCH
