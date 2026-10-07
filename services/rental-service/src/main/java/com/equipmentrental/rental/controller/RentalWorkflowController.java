@@ -8,6 +8,7 @@ import com.equipmentrental.rental.dto.request.RentalRequestCreate;
 import com.equipmentrental.rental.dto.request.RentalRequestUpdate;
 import com.equipmentrental.rental.dto.request.ReserveOrderRequest;
 import com.equipmentrental.rental.dto.request.RejectQuotationRequest;
+import com.equipmentrental.rental.dto.request.CustomerConfirmationRequest;
 import com.equipmentrental.rental.dto.response.QuotationResponse;
 import com.equipmentrental.rental.dto.response.RentalOrderResponse;
 import com.equipmentrental.rental.dto.response.RentalRequestResponse;
@@ -129,6 +130,13 @@ public class RentalWorkflowController {
     @PreAuthorize("hasAuthority('rental.quotation.approve')")
     ApiResponse<QuotationResponse> approve(@PathVariable Long id) {
         return ApiResponse.success(s.approveQuotation(id));
+    }
+
+    @PatchMapping("/quotations/{id}/record-acceptance")
+    @PreAuthorize("hasAuthority('rental.quotation.update')")
+    ApiResponse<QuotationResponse> recordAcceptance(@PathVariable Long id,
+            @Valid @RequestBody CustomerConfirmationRequest request) {
+        return ApiResponse.success(s.acceptQuotation(id));
     }
 
     @PatchMapping("/quotations/{id}/accept")

@@ -11,6 +11,10 @@ import java.util.Optional;
 public interface EquipmentRepository
         extends JpaRepository<Equipment, Long>,
         JpaSpecificationExecutor<Equipment> {
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("select e from Equipment e where e.id = :id and e.organizationId = :organizationId")
+    Optional<Equipment> lockForReservation(@org.springframework.data.repository.query.Param("id") Long id,
+            @org.springframework.data.repository.query.Param("organizationId") Long organizationId);
 
     Optional<Equipment> findByQrCode(String qrCode);
     List<Equipment> findByOrganizationId(

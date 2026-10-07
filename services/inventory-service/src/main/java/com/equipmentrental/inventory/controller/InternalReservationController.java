@@ -15,6 +15,11 @@ import org.springframework.web.bind.annotation.*;
 public class InternalReservationController {
 
     private final InternalReservationService service;
+    @PostMapping("/{id}/extend")
+    public EquipmentReservationResponse extend(@PathVariable Long id,
+            @jakarta.validation.Valid @RequestBody com.equipmentrental.inventory.dto.request.ExtendReservationRequest request) {
+        return service.extend(id, request.newEndAt());
+    }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)

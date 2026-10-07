@@ -197,7 +197,7 @@ public class RentalWorkflowService {
 
     public QuotationResponse approveQuotation(Long id) {
         Quotation q = findQuotation(id);
-        if (q.getStatus() != QuotationStatus.SENT)
+        if (q.getStatus() != QuotationStatus.SENT && q.getStatus() != QuotationStatus.PENDING_APPROVAL)
             throw ApiException.invalidStatus("Chỉ phê duyệt được báo giá đã gửi");
         q.setStatus(QuotationStatus.APPROVED);
         return RentalResponseMapper.quotation(quotations.save(q));
@@ -213,7 +213,7 @@ public class RentalWorkflowService {
 
     public QuotationResponse rejectQuotation(Long id, String reason) {
         Quotation q = findQuotation(id);
-        if (q.getStatus() != QuotationStatus.SENT && q.getStatus() != QuotationStatus.APPROVED)
+        if (q.getStatus() != QuotationStatus.SENT && q.getStatus() != QuotationStatus.PENDING_APPROVAL && q.getStatus() != QuotationStatus.APPROVED)
             throw ApiException.invalidStatus("Báo giá không thể từ chối ở trạng thái hiện tại");
         q.setStatus(QuotationStatus.REJECTED);
         q.setRejectionReason(reason.trim());

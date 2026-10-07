@@ -32,16 +32,19 @@ public class ContractService {
     private final ContractAppendixRepository appendices;
     private final RentalOrderRepository orders;
     private final RentalDataScopeGuard dataScopeGuard;
+    private final com.equipmentrental.rental.client.InventoryClient inventoryClient;
 
     public ContractService(
             RentalContractRepository contracts,
             ContractAppendixRepository appendices,
             RentalOrderRepository orders,
-            RentalDataScopeGuard dataScopeGuard) {
+            RentalDataScopeGuard dataScopeGuard,
+            com.equipmentrental.rental.client.InventoryClient inventoryClient) {
         this.contracts = contracts;
         this.appendices = appendices;
         this.orders = orders;
         this.dataScopeGuard = dataScopeGuard;
+        this.inventoryClient = inventoryClient;
     }
 
     public RentalContractResponse create(ContractCreateRequest request) {
@@ -172,6 +175,13 @@ public class ContractService {
         RentalContract contract = contract(appendix.getContractId());
         appendix.sign();
         if (appendix.getAppendixType() == AppendixType.EXTENSION) {
+            if (!appendix.getNewEndAt().isAfter(contract.getEndAt()))
+                throw new ApiException("Phụ lục không được rút ngắn thời hạn đã gia hạn");
+            RentalOrder order = orders.findById(contract.getRentalOrderId())
+                    .orElseThrow(() -> ApiException.notFound("Không tìm thấy đơn thuê"));
+            if (order.getInventoryReservationId() != null)
+                inventoryClient.extendReservation(order.getInventoryReservationId(), appendix.getNewEndAt());
+            order.setEndAt(appendix.getNewEndAt()); orders.save(order);
             contract.setEndAt(appendix.getNewEndAt());
             contract.setStatus(ContractStatus.EXTENDED);
             contracts.save(contract);

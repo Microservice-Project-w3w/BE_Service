@@ -1,6 +1,7 @@
 package com.equipmentrental.identity.controller;
 
 import com.equipmentrental.identity.dto.request.AdminCreateUserRequest;
+import com.equipmentrental.identity.dto.request.AdminUpdateUserRequest;
 import com.equipmentrental.identity.dto.request.AdminResetPasswordRequest;
 import com.equipmentrental.identity.dto.request.UpdateUserRoleRequest;
 import com.equipmentrental.identity.dto.response.ApiResponse;
@@ -39,6 +40,12 @@ public class IdentityManagementController {
             JwtAuthenticationToken authentication) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(service.create(request, currentUserId(authentication))));
+    }
+
+    @PutMapping("/{id}") @PreAuthorize("hasAuthority('identity.user.update')")
+    public ApiResponse<UserResponse> update(@PathVariable Long id, @Valid @RequestBody AdminUpdateUserRequest request,
+            JwtAuthenticationToken authentication) {
+        return ApiResponse.success(service.update(id, request, currentUserId(authentication)));
     }
 
     @PutMapping("/{id}/role") @PreAuthorize("hasAuthority('identity.user.update')")
