@@ -295,7 +295,7 @@ Mật khẩu chung cho cả năm tài khoản: **`Demo@123`**.
 | `rentai.demo.manager@gmail.com` | Manager | duyệt báo giá, đơn thuê, hợp đồng, AI chat |
 | `rentai.demo.sales@gmail.com` | Sales | khách hàng, yêu cầu thuê và báo giá |
 | `rentai.demo.operations@gmail.com` | Operations | thiết bị, kho, nhập/xuất/chuyển/kiểm kê |
-| `rentai.demo.customer@gmail.com` | Customer | dữ liệu khách hàng mẫu (customer portal đang ẩn ở MVP) |
+| `rentai.demo.customer@gmail.com` | Customer | xem thiết bị/lịch trống, gửi yêu cầu, chấp nhận báo giá và theo dõi đơn/hợp đồng của mình |
 
 Seed tạo một tổ chức, hai chi nhánh, hai khách hàng, danh mục/kho/bốn thiết bị với các trạng thái sẵn sàng–giữ chỗ–bảo dưỡng, cùng luồng thuê có yêu cầu mới, báo giá chờ duyệt, đơn đã giữ chỗ, hợp đồng chờ duyệt và hợp đồng đang hiệu lực.
 
@@ -310,3 +310,26 @@ Luồng thử đầy đủ: Operations chuẩn bị thiết bị → Sales tạo
 - `Table ... doesn't exist` hoặc `Unknown column`: kiểm tra schema/migration của database đang dùng; không xóa volume hay nạp seed liên tục để sửa lỗi schema.
 
 Khi đưa lên Git, giữ đủ `.env.example`, `infra/mysql/init/`, `infra/mysql/seed/`, `scripts/load-demo-seed.sh` và `scripts/run-local-service.sh`. Các file này đã có trong repo; người kéo code chỉ cần cấu hình `.env` riêng rồi làm theo thứ tự trên. AI là phần tùy chọn, cách chạy riêng ở mục AI service phía trên.
+
+### Customer portal
+
+Nếu máy đã có seed, chạy lệnh này một lần để thêm bảng liên kết và cấp chi nhánh cho tài khoản Customer demo; **không cần nạp lại toàn bộ seed**:
+
+```bash
+cd ~/backend_microservice
+bash scripts/enable-customer-portal-demo.sh
+```
+
+Sau đó khởi động lại Organization-Customer và Rental bằng `scripts/run-local-service.sh`, đăng xuất/đăng nhập lại Customer để nhận JWT có chi nhánh. Frontend mở `/customer/equipment`. Máy mới dùng `load-demo-seed.sh` như trên; script đã nạp thêm `06-customer-portal-demo.sql`.
+
+Tài khoản demo được liên kết với `DEMO-CUS-BIZ`, nên thấy các yêu cầu/báo giá/đơn/hợp đồng của khách này. `owner_user_id` vẫn là Sales phụ trách; tài khoản đăng nhập nằm ở bảng riêng `customer_portal_accounts`. Rental gọi Organization-Customer bằng chính bearer token của khách để xác định quyền OWN; không nhận customerId tùy ý từ trình duyệt và không đọc chéo database.
+
+Luồng thử: Customer chọn loại thiết bị → kiểm tra thời gian và số lượng → gửi yêu cầu → Sales lập/gửi báo giá → Manager duyệt → Customer đọc và chấp nhận báo giá → Sales chuyển thành đơn → Manager giữ chỗ/xác nhận → Sales tạo hợp đồng → Manager duyệt → Sales ghi nhận chữ ký đã có. Customer chỉ xem tiến trình đơn và hợp đồng, chưa ký điện tử hoặc tự xác nhận giao hàng/thanh toán.
+
+Tài khoản Customer mới đăng ký chưa tự có tổ chức/chi nhánh hoặc hồ sơ khách hàng. Admin cấp scope ở trang Tài khoản, Sales tạo hồ sơ khách hàng thuộc chi nhánh tương ứng, rồi Admin gọi:
+
+- `PUT /api/v1/organizations/{organizationId}/customers/{customerId}/portal-account`, body `{"userId": 5}`, với token Admin.
+- `DELETE` cùng đường dẫn để gỡ liên kết. Mỗi tài khoản chỉ liên kết một hồ sơ; gỡ liên kết cũ trước khi đổi.
+- `GET /api/v1/organizations/{organizationId}/customers/me` dùng token Customer để kiểm tra liên kết.
+
+Backend kiểm tra tài khoản được liên kết phải là CUSTOMER, ACTIVE, cùng tổ chức và có chi nhánh của hồ sơ. Customer không đọc danh sách hồ sơ khách hàng khác và không truy cập được tài liệu thuê của họ bằng cách đổi ID trên URL. Billing, Logistics, Maintenance và AI cho Customer vẫn không mở trong portal.

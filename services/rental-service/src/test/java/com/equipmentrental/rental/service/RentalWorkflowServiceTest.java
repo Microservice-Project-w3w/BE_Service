@@ -45,7 +45,8 @@ class RentalWorkflowServiceTest {
         RentalRequestRepository requests = repository(RentalRequestRepository.class, null);
         QuotationRepository quotations = repository(QuotationRepository.class, quotation);
         RentalOrderRepository orders = repository(RentalOrderRepository.class, null);
-        RentalDataScopeGuard guard = new RentalDataScopeGuard(new CurrentUserProvider(), new DataScopeAuthorizer());
+        RentalDataScopeGuard guard = new RentalDataScopeGuard(new CurrentUserProvider(), new DataScopeAuthorizer(),
+                new com.equipmentrental.rental.client.CustomerPortalClient("http://localhost"));
         PricingService pricing = new PricingService(
                 repository(RentalPriceRepository.class, null),
                 repository(DiscountCodeRepository.class, null),
@@ -63,7 +64,8 @@ class RentalWorkflowServiceTest {
 
     @Test
     void percentageDepositCannotExceedOneHundred() {
-        RentalDataScopeGuard guard = new RentalDataScopeGuard(new CurrentUserProvider(), new DataScopeAuthorizer());
+        RentalDataScopeGuard guard = new RentalDataScopeGuard(new CurrentUserProvider(), new DataScopeAuthorizer(),
+                new com.equipmentrental.rental.client.CustomerPortalClient("http://localhost"));
         PricingService service = new PricingService(
                 repository(RentalPriceRepository.class, null),
                 repository(DiscountCodeRepository.class, null),

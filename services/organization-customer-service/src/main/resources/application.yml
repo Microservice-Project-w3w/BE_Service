@@ -22,3 +22,7 @@ security:
 management:
   endpoints.web.exposure.include: health,info
   endpoint.health.show-details: always
+
+app:
+  integration:
+    identity-base-url: ${IDENTITY_SERVICE_URL:http://localhost:8081}

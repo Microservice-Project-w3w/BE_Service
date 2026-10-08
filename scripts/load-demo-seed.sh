@@ -26,14 +26,17 @@ if [ "${role_count:-0}" -eq 0 ]; then
   exit 1
 fi
 
+bash "$project_root/scripts/enable-customer-portal-demo.sh"
+
 for seed_file in \
   "$seed_directory/01-organization-customer-demo.sql" \
   "$seed_directory/02-identity-demo.sql" \
   "$seed_directory/03-organization-customer-assignments-demo.sql" \
   "$seed_directory/04-inventory-demo.sql" \
-  "$seed_directory/05-rental-demo.sql"; do
+  "$seed_directory/05-rental-demo.sql" \
+  "$seed_directory/06-customer-portal-demo.sql"; do
   echo "Loading $(basename "$seed_file")"
-  "${compose[@]}" exec -T -e "MYSQL_PWD=$mysql_password" mysql mysql -uroot < "$seed_file"
+  "${compose[@]}" exec -T -e "MYSQL_PWD=$mysql_password" mysql mysql --default-character-set=utf8mb4 -uroot < "$seed_file"
 done
 
 echo "Demo data loaded. Demo account password: Demo@123"

@@ -66,6 +66,8 @@ public class RentalWorkflowService {
             throw new ApiException("Thời gian trả phải sau thời gian nhận");
         }
         dataScopeGuard.requireRentalAccess(r.organizationId(), r.branchId(), r.customerId());
+        inventoryClient.requireActiveEquipmentTypes(r.organizationId(), r.items().stream()
+                .map(com.equipmentrental.rental.dto.request.RentalRequestItemRequest::equipmentTypeId).toList());
         RentalRequest e = new RentalRequest();
         e.setRequestCode("REQ-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         e.setOrganizationId(r.organizationId());
@@ -132,6 +134,8 @@ public class RentalWorkflowService {
         if (!request.endAt().isAfter(request.startAt())) {
             throw new ApiException("Thời gian trả phải sau thời gian nhận");
         }
+        inventoryClient.requireActiveEquipmentTypes(rentalRequest.getOrganizationId(), request.items().stream()
+                .map(com.equipmentrental.rental.dto.request.RentalRequestItemRequest::equipmentTypeId).toList());
         rentalRequest.setStartAt(request.startAt());
         rentalRequest.setEndAt(request.endAt());
         rentalRequest.setDeliveryAddress(request.deliveryAddress());
@@ -210,6 +214,8 @@ public class RentalWorkflowService {
         Quotation q = findQuotation(id);
         if (q.getStatus() != QuotationStatus.APPROVED)
             throw ApiException.invalidStatus("Chỉ chấp nhận được báo giá đã được quản lý phê duyệt");
+        if (q.getValidUntil() == null || !q.getValidUntil().isAfter(LocalDateTime.now()))
+            throw ApiException.invalidStatus("Báo giá đã hết hạn, liên hệ Sales để nhận báo giá mới");
         q.setStatus(QuotationStatus.ACCEPTED);
         return RentalResponseMapper.quotation(quotations.save(q));
     }

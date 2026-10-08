@@ -15,13 +15,37 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import com.equipmentrental.rental.exception.ApiException;
 
 @Component
 public class InventoryClient {
     private final RestClient restClient;
 
     public InventoryClient(@Value("${app.integration.inventory-base-url}") String baseUrl) {
-        this.restClient = RestClient.builder().baseUrl(baseUrl).build();
+        var factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(3000); factory.setReadTimeout(5000);
+        this.restClient = RestClient.builder().baseUrl(baseUrl).requestFactory(factory).build();
+    }
+
+    public void requireActiveEquipmentTypes(Long organizationId, List<Long> typeIds) {
+        if (typeIds.size() != new java.util.HashSet<>(typeIds).size())
+            throw new ApiException("Không chọn trùng loại thiết bị; hãy tăng số lượng trên dòng đã có");
+        for (Long id : typeIds) {
+            try {
+                JsonNode response = restClient.get()
+                        .uri("/api/v1/inventory/equipment-types/{id}?organizationId={org}", id, organizationId)
+                        .headers(this::forwardBearerToken).retrieve().body(JsonNode.class);
+                var type = data(response);
+                if (type.path("organizationId").asLong() != organizationId || !type.path("active").asBoolean())
+                    throw new ApiException("Loại thiết bị không thuộc tổ chức hoặc đã ngừng cho thuê");
+            } catch (RestClientResponseException ex) {
+                if (ex.getStatusCode().is4xxClientError())
+                    throw new ApiException("Không tìm thấy loại thiết bị hợp lệ trong tổ chức này");
+                throw unavailable(ex);
+            } catch (RestClientException ex) { throw unavailable(ex); }
+        }
     }
 
     public JsonNode availability(
