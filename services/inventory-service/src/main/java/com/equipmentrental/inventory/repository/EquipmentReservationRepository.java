@@ -11,6 +11,12 @@ import java.time.LocalDateTime;
 @Repository
 public interface EquipmentReservationRepository
         extends JpaRepository<EquipmentReservation, Long> {
+    @org.springframework.data.jpa.repository.Query("select r.id from EquipmentReservation r where r.organizationId=:org and r.requestReference=:reference")
+    Optional<Long> findDemoIdByReference(@org.springframework.data.repository.query.Param("org") Long org,
+            @org.springframework.data.repository.query.Param("reference") String reference);
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("select r from EquipmentReservation r where r.id=:id")
+    Optional<EquipmentReservation> findForDemoUpdate(@org.springframework.data.repository.query.Param("id") Long id);
 
     List<EquipmentReservation> findByRentalOrderId(
             Long rentalOrderId

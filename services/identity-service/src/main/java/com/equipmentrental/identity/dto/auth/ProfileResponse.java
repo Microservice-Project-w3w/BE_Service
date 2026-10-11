@@ -9,4 +9,7 @@ public record ProfileResponse(
         String fullName,
         String phone,
         String companyName,
-        String taxCode) {}
+        String taxCode,
+        Long organizationId,
+        List<Long> branchIds,
+        List<String> permissions) {}

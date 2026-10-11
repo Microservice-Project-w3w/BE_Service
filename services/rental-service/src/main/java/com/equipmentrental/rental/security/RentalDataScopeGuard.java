@@ -6,9 +6,7 @@ import com.equipmentrental.common.security.DataScopeAuthorizer;
 import com.equipmentrental.common.web.BusinessException;
 import com.equipmentrental.common.web.CommonErrorCode;
 import org.springframework.stereotype.Component;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
+import com.equipmentrental.rental.client.CustomerPortalClient;
 
 /**
  * Applies organization and branch data scope inside the service layer.
@@ -18,10 +16,13 @@ import org.springframework.security.oauth2.jwt.Jwt;
 public class RentalDataScopeGuard {
     private final CurrentUserProvider currentUserProvider;
     private final DataScopeAuthorizer dataScopeAuthorizer;
+    private final CustomerPortalClient portal;
 
-    public RentalDataScopeGuard(CurrentUserProvider currentUserProvider, DataScopeAuthorizer dataScopeAuthorizer) {
+    public RentalDataScopeGuard(CurrentUserProvider currentUserProvider, DataScopeAuthorizer dataScopeAuthorizer,
+            CustomerPortalClient portal) {
         this.currentUserProvider = currentUserProvider;
         this.dataScopeAuthorizer = dataScopeAuthorizer;
+        this.portal = portal;
     }
 
     public void requireBranch(Long organizationId, Long branchId) {
@@ -29,15 +30,14 @@ public class RentalDataScopeGuard {
         if (!dataScopeAuthorizer.canAccessBranch(user, organizationId, branchId)) {
             throw new BusinessException(CommonErrorCode.AUTH_DATA_SCOPE_DENIED);
         }
+        if (isCustomer(user)) customerContext(user, organizationId, branchId);
     }
 
     public void requireRentalAccess(Long organizationId, Long branchId, Long customerId) {
         CurrentUser user = currentUserProvider.getCurrentUser();
-        boolean allowed = isCustomer(user)
-                ? dataScopeAuthorizer.canAccessBranch(user, organizationId, branchId)
-                        && customerId != null
-                        && customerId.equals(jwtCustomerId())
-                : dataScopeAuthorizer.canAccessBranch(user, organizationId, branchId);
+        boolean allowed = dataScopeAuthorizer.canAccessBranch(user, organizationId, branchId);
+        if (allowed && isCustomer(user))
+            allowed = customerId != null && customerId.equals(customerContext(user, organizationId, branchId).customerId());
         if (!allowed) {
             throw new BusinessException(CommonErrorCode.AUTH_DATA_SCOPE_DENIED);
         }
@@ -45,26 +45,23 @@ public class RentalDataScopeGuard {
 
     public Long customerIdForOwnList(Long organizationId, Long branchId) {
         CurrentUser user = currentUserProvider.getCurrentUser();
-        requireBranch(organizationId, branchId);
         if (!isCustomer(user)) {
+            requireBranch(organizationId, branchId);
             return null;
         }
-        Long customerId = jwtCustomerId();
-        if (customerId == null) {
-            throw new BusinessException(CommonErrorCode.AUTH_DATA_SCOPE_DENIED);
-        }
-        return customerId;
+        return customerContext(user, organizationId, branchId).customerId();
     }
 
     private boolean isCustomer(CurrentUser user) {
         return user.roles().contains("CUSTOMER") || user.roles().contains("ROLE_CUSTOMER");
     }
 
-    private Long jwtCustomerId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !(authentication.getPrincipal() instanceof Jwt jwt)) {
-            return null;
-        }
-        return CurrentUserProvider.toLong(jwt.getClaim("customerId"));
+    private CustomerPortalClient.Context customerContext(CurrentUser user, Long organizationId, Long branchId) {
+        if (!dataScopeAuthorizer.canAccessBranch(user, organizationId, branchId))
+            throw new BusinessException(CommonErrorCode.AUTH_DATA_SCOPE_DENIED);
+        var context = portal.me(organizationId);
+        if (!user.userId().equals(String.valueOf(context.userId())) || !branchId.equals(context.branchId()))
+            throw new BusinessException(CommonErrorCode.AUTH_DATA_SCOPE_DENIED);
+        return context;
     }
 }

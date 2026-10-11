@@ -102,6 +102,7 @@ public class PricingService {
     }
 
     public DiscountCodeResponse createDiscount(DiscountCodeRequest r) {
+        validateDiscount(r);
         if (r.validTo().isBefore(r.validFrom())) {
             throw new ApiException("Ngày giảm giá không hợp lệ");
         }
@@ -123,6 +124,7 @@ public class PricingService {
     }
 
     public DiscountCodeResponse updateDiscount(Long id, DiscountCodeRequest r) {
+        validateDiscount(r);
         if (r.validTo().isBefore(r.validFrom())) throw new ApiException("Ngày giảm giá không hợp lệ");
         DiscountCode discount =
                 discounts.findById(id).orElseThrow(() -> ApiException.notFound("Không tìm thấy mã giảm giá"));
@@ -187,6 +189,16 @@ public class PricingService {
         BigDecimal value = d.getDiscountType() == DiscountType.PERCENT
                 ? amount.multiply(d.getDiscountValue()).divide(BigDecimal.valueOf(100))
                 : d.getDiscountValue();
-        return d.getMaxDiscount() != null && value.compareTo(d.getMaxDiscount()) > 0 ? d.getMaxDiscount() : value;
+        if (d.getMaxDiscount() != null) value = value.min(d.getMaxDiscount());
+        return value.max(BigDecimal.ZERO).min(amount); // Never create a negative quotation total.
+    }
+
+    private void validateDiscount(DiscountCodeRequest r) {
+        if (r.discountValue().signum() < 0
+                || (r.discountType() == DiscountType.PERCENT && r.discountValue().compareTo(BigDecimal.valueOf(100)) > 0))
+            throw new ApiException("Giảm giá phần trăm phải trong khoảng 0 đến 100; số tiền giảm không được âm");
+        if ((r.maxDiscount() != null && r.maxDiscount().signum() < 0)
+                || (r.minOrderValue() != null && r.minOrderValue().signum() < 0))
+            throw new ApiException("Mức giảm tối đa và giá trị tối thiểu không được âm");
     }
 }

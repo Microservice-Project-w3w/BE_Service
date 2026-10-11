@@ -18,6 +18,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @EntityGraph(attributePaths = {"role", "role.rolePermissions", "role.rolePermissions.permission"})
     Optional<User> findByEmailIgnoreCase(String email);
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select user from User user where lower(user.email) = lower(:email)")
+    Optional<User> findByEmailForLogin(@Param("email") String email);
+
 
     @EntityGraph(attributePaths = {"role", "role.rolePermissions", "role.rolePermissions.permission"})
     Optional<User> findDetailedById(Long id);

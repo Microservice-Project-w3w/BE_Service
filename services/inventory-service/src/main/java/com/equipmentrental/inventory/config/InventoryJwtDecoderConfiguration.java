@@ -16,12 +16,15 @@ public class InventoryJwtDecoderConfiguration {
     @Bean
     public JwtDecoder jwtDecoder(
             @Value("${security.jwt.secret-base64}") String secretBase64,
-            @Value("${security.jwt.issuer}") String issuer) {
+            @Value("${security.jwt.issuer}") String issuer,
+            @Value("${IDENTITY_SERVICE_URL:http://localhost:8081}") String identityUrl) {
         byte[] secret = decodeSecret(secretBase64);
         NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(new SecretKeySpec(secret, "HmacSHA256"))
                 .macAlgorithm(MacAlgorithm.HS256)
                 .build();
-        decoder.setJwtValidator(JwtValidators.createDefaultWithIssuer(issuer));
+        decoder.setJwtValidator(new org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator<>(
+                JwtValidators.createDefaultWithIssuer(issuer),
+                new com.equipmentrental.common.security.LiveSessionValidator(identityUrl)));
         return decoder;
     }
 

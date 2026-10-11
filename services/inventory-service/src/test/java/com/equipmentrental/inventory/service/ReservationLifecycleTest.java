@@ -29,7 +29,7 @@ class ReservationLifecycleTest {
     }
     EquipmentReservation reservation() {
         var reservation = EquipmentReservation.builder().id(1L).organizationId(1L).branchId(1L).endAt(oldEnd).status(ReservationStatus.CONFIRMED).build();
-        when(reservations.findById(1L)).thenReturn(Optional.of(reservation));
+        when(reservations.findForDemoUpdate(1L)).thenReturn(Optional.of(reservation));
         when(equipment.lockForReservation(7L, 1L)).thenReturn(Optional.of(Equipment.builder().id(7L).build()));
         when(items.findByReservationId(1L)).thenReturn(List.of(EquipmentReservationItem.builder().equipmentId(7L).equipmentTypeId(3L).reservationId(1L).endAt(oldEnd).build()));
         return reservation;

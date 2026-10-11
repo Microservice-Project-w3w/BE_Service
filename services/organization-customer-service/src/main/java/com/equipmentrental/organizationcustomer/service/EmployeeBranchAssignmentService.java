@@ -294,6 +294,44 @@ public class EmployeeBranchAssignmentService {
     // ENTITY -> RESPONSE
     // =====================================================
 
+    public EmployeeBranchAssignmentResponse transfer(Long organizationId, EmployeeBranchAssignmentRequest request) {
+        organizationService.getEntity(organizationId);
+        employeeService.getEntity(organizationId, request.employeeId());
+        var destination = branchService.getEntity(organizationId, request.branchId());
+        if (destination.getStatus() != com.equipmentrental.organizationcustomer.enums.BranchStatus.ACTIVE) {
+            throw new BadRequestException("Chi nhánh nhận nhân viên phải đang hoạt động");
+        }
+        LocalDate date = request.assignedFrom() == null ? LocalDate.now() : request.assignedFrom();
+        if (!date.equals(LocalDate.now()) || request.assignedTo() != null) {
+            throw new BadRequestException("Điều chuyển hiện chỉ áp dụng ngay trong ngày");
+        }
+        // Lock this employee's assignments. All changes share one transaction.
+        var history = assignmentRepository.findForTransfer(organizationId, request.employeeId());
+        var target = history.stream().filter(item -> item.getBranchId().equals(request.branchId()))
+                .findFirst().orElse(null);
+        for (var assignment : history) {
+            if (assignment.getStatus() == AssignmentStatus.ACTIVE
+                    && !assignment.getBranchId().equals(request.branchId())) {
+                assignment.setStatus(AssignmentStatus.INACTIVE);
+                assignment.setPrimaryAssignment(false);
+                assignment.setAssignedTo(date);
+                assignment.setUpdatedBy(request.actorUserId());
+            }
+        }
+        assignmentRepository.saveAll(history);
+        if (target == null) {
+            target = EmployeeBranchAssignment.builder()
+                    .organizationId(organizationId).employeeId(request.employeeId()).branchId(request.branchId())
+                    .createdBy(request.actorUserId()).build();
+        }
+        if (target.getStatus() != AssignmentStatus.ACTIVE) target.setAssignedFrom(date);
+        target.setAssignedTo(null);
+        target.setPrimaryAssignment(true);
+        target.setStatus(AssignmentStatus.ACTIVE);
+        target.setUpdatedBy(request.actorUserId());
+        return toResponse(assignmentRepository.save(target));
+    }
+
     private EmployeeBranchAssignmentResponse toResponse(
             EmployeeBranchAssignment assignment
     ) {

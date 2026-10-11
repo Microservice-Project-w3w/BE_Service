@@ -17,7 +17,7 @@ class RentalLifecycleGuardTest {
         var orders = mock(RentalOrderRepository.class); var contracts = mock(RentalContractRepository.class);
         var inventory = mock(InventoryClient.class); var order = new RentalOrder();
         order.setStatus(OrderStatus.CONFIRMED); order.setInventoryReservationId("7");
-        when(orders.findById(1L)).thenReturn(Optional.of(order));
+        when(orders.findForUpdate(1L)).thenReturn(Optional.of(order));
         when(contracts.existsByRentalOrderIdAndStatusNotIn(eq(1L), anyList())).thenReturn(true);
         var service = new RentalWorkflowService(mock(RentalRequestRepository.class), mock(QuotationRepository.class), orders,
                 mock(PricingService.class), mock(RentalDataScopeGuard.class), inventory, contracts);
@@ -30,7 +30,7 @@ class RentalLifecycleGuardTest {
         var inventory = mock(InventoryClient.class); var contract = new RentalContract(); contract.setStatus(ContractStatus.CANCELLED);
         var appendix = new ContractAppendix(); appendix.setContractId(1L); appendix.setStatus(AppendixStatus.APPROVED);
         when(appendices.findById(2L)).thenReturn(Optional.of(appendix));
-        when(contracts.findById(1L)).thenReturn(Optional.of(contract));
+        when(contracts.findForUpdate(1L)).thenReturn(Optional.of(contract));
         var service = new ContractService(contracts, appendices, mock(RentalOrderRepository.class), mock(RentalDataScopeGuard.class), inventory);
         assertThrows(ApiException.class, () -> service.signAppendix(2L));
         verify(appendices, never()).save(any()); verifyNoInteractions(inventory);

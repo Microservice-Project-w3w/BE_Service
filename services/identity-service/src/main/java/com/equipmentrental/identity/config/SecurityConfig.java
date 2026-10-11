@@ -97,7 +97,9 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(
         HttpSecurity http,
-        JwtAuthenticationConverter converter
+        JwtAuthenticationConverter converter,
+        com.equipmentrental.identity.service.SessionService sessions,
+        com.equipmentrental.identity.repository.UserRepository users
     ) throws Exception {
 
         http
@@ -140,6 +142,8 @@ public class SecurityConfig {
                 )
             );
 
+        http.addFilterAfter(new com.equipmentrental.identity.security.ActiveSessionFilter(sessions, users),
+                org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter.class);
         return http.build();
     }
 

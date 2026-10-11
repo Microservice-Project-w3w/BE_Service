@@ -10,6 +10,12 @@ import java.util.Optional;
 public interface EmployeeBranchAssignmentRepository
         extends JpaRepository<EmployeeBranchAssignment, Long> {
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("select a from EmployeeBranchAssignment a where a.organizationId = :organizationId and a.employeeId = :employeeId order by a.id desc")
+    List<EmployeeBranchAssignment> findForTransfer(
+            @org.springframework.data.repository.query.Param("organizationId") Long organizationId,
+            @org.springframework.data.repository.query.Param("employeeId") Long employeeId);
+
     Optional<EmployeeBranchAssignment>
     findByIdAndOrganizationId(
             Long id,

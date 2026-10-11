@@ -31,3 +31,4 @@ app:
       - /actuator/info
   integration:
     inventory-base-url: ${INVENTORY_SERVICE_URL:http://localhost:8083}
+    organization-customer-base-url: ${ORGANIZATION_CUSTOMER_SERVICE_URL:http://localhost:8082}

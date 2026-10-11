@@ -134,7 +134,7 @@ public class AuthService {
         String normalizedEmail = normalizeEmail(request.email());
 
         User user = userRepository
-                .findByEmailIgnoreCase(normalizedEmail)
+                .findByEmailForLogin(normalizedEmail)
                 .orElseThrow(() ->
                         new ResponseStatusException(
                                 HttpStatus.UNAUTHORIZED,
@@ -218,7 +218,7 @@ public class AuthService {
         }
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = com.equipmentrental.identity.exception.IdentityException.class)
     public void verifyEmail(String email, String code) {
         User user = verificationService.verify(normalizeEmail(email), VerificationService.PURPOSE_VERIFY_EMAIL, code);
         user.setEmailVerified(true);
@@ -242,7 +242,7 @@ public class AuthService {
                 .orElse(null);
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = com.equipmentrental.identity.exception.IdentityException.class)
     public void resetPassword(
             String email,
             String code,
@@ -295,7 +295,23 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public ProfileResponse profile(Long userId) {
-        return profileResponse(findUser(userId));
+        User user = findUser(userId);
+        if (user.getStatus() != UserStatus.ACTIVE)
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tài khoản không còn hoạt động");
+        return profileResponse(user);
+    }
+
+    @Transactional(readOnly = true)
+    public ProfileResponse profile(Jwt jwt) {
+        try {
+            Long userId = Long.valueOf(jwt.getSubject());
+            String sessionId = jwt.getClaimAsString("sessionId");
+            if (sessionId == null) throw new NumberFormatException();
+            sessionService.requireActiveForUser(userId, Long.valueOf(sessionId));
+            return profile(userId);
+        } catch (NumberFormatException ex) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token thiếu phiên đăng nhập hợp lệ");
+        }
     }
 
     @Transactional
@@ -319,7 +335,9 @@ public class AuthService {
         return new ProfileResponse(String.valueOf(user.getId()), user.getEmail(),
                 java.util.List.of(user.getRole().getCode()), user.getFullName(),
                 user.getPhone() == null ? "" : user.getPhone(),
-                user.getCompanyName(), user.getTaxCode());
+                user.getCompanyName(), user.getTaxCode(), user.getOrganizationId(),
+                user.getBranchIds().stream().sorted().toList(),
+                user.getRole().getPermissions().stream().map(permission -> permission.getCode()).sorted().toList());
     }
 
     private String trimToNull(String value) {
