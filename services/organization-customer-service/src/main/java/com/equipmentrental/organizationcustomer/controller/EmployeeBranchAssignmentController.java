@@ -20,6 +20,13 @@ public class EmployeeBranchAssignmentController {
 
     private final EmployeeBranchAssignmentService assignmentService;
 
+    @PostMapping("/transfer")
+    @PreAuthorize("hasAuthority('organization.employee.assign-branch')")
+    public EmployeeBranchAssignmentResponse transfer(@PathVariable Long organizationId,
+            @Valid @RequestBody EmployeeBranchAssignmentRequest request) {
+        return assignmentService.transfer(organizationId, request);
+    }
+
 
     // =====================================================
     // 1. GÁN NHÂN VIÊN → CHI NHÁNH

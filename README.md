@@ -1,282 +1,143 @@
-# Backend microservice — việc cần làm và cách chia cho nhóm
+# RentAI — Equipment Rental Backend
 
-`backend_microservice` là bản làm lại. Folder `../backend` là source tham khảo: xem controller, DTO, entity, service, repository và test ở đó để chuyển **nghiệp vụ đang chạy** sang đây. Không copy nguyên module cũ rồi sửa lặt vặt; mỗi người tạo migration, entity, DTO, service và test mới trong module của mình.
+Backend cho hệ thống quản lý cho thuê thiết bị, tổ chức theo bốn dịch vụ nghiệp vụ độc lập và một API Gateway. Dự án hỗ trợ quy trình yêu cầu thuê → báo giá → giữ chỗ → hợp đồng → bàn giao → thu tiền → nhận trả, cùng trợ lý AI tra cứu dữ liệu theo quyền.
 
-## Chia người và phạm vi merge
+Repository này có thể clone, chạy và kiểm thử độc lập bằng REST API với curl/Postman, không yêu cầu frontend hoặc AI. Frontend và AI là các repository tích hợp tùy chọn.
 
-| Người | Folder được sửa chính | Việc phải hoàn thành | Port / DB |
-|---|---|---|---|
-| Phạm Đình Đức Vượng | `api-gateway`, project `E:\equipment-rental-AI` | Gateway route, CORS, health check, AI chat/Ollama và merge các service vào luồng chung | 8080 / 8090 |
-| Tô Trung Tuấn | `services/identity-service`; một phần `services/inventory-service` | Identity: đăng nhập, user, role, permission, session. Inventory: danh mục, master data và CRUD thiết bị | 8081 / `identity_db`; 8083 / `inventory_db` |
-| Trần Minh Tú | Một phần `services/inventory-service` | Availability, reservation, internal equipment query/status; warehouse, nhập/xuất/chuyển kho và kiểm kê | 8083 / `inventory_db` |
-| Bùi Nhật Long | `services/organization-customer-service` | Organization, branch, employee, customer | 8082 / `organization_customer_db` |
-| Phạm Quốc Việt | `services/rental-service` | Rental request → quotation → order → contract | 8084 / `rental_db` |
+Đây là dự án nhóm phục vụ học tập và trình diễn nghiệp vụ. Các chức năng tài chính, bàn giao, bảo trì và ký xác nhận được triển khai ở mức demo, không phải hệ thống thanh toán hay chữ ký số thương mại.
 
-Không sửa module người khác. Nếu cần thêm endpoint, ghi rõ endpoint, request/response và service sở hữu trong mô tả PR rồi nhắn Phạm Đình Đức Vượng thêm route Gateway.
+[Frontend](https://github.com/Microservice-Project-w3w/FE_service) · [AI Assistant](https://github.com/Microservice-Project-w3w/Equipment-Rental-AI)
 
-## Thứ tự làm để có demo chạy được
+[Kiến trúc](#kiến-trúc) · [Chạy local](#chạy-local-từ-máy-mới) · [Kịch bản demo](#kịch-bản-trình-diễn) · [AI](#trợ-lý-ai-tùy-chọn) · [Kiểm thử](#api-và-kiểm-thử) · [Nhóm thực hiện](#nhóm-thực-hiện)
 
-1. Identity: login, `GET /auth/me`, role/scope cơ bản.
-2. Organization-Customer: organization, branch, customer, employee branch assignment.
-3. Inventory: category, equipment, availability và reservation nội bộ.
-4. Rental: request → quotation → approve/reject → convert order → reserve.
-5. Contract, user administration, pricing/discount và phần P1/P2 làm sau khi P0 chạy qua Gateway.
+## Kiến trúc
 
-Mỗi P0 phải có migration Flyway, controller test và chạy được qua `http://localhost:8080`, không chỉ chạy direct service.
+```text
+curl / Postman / Frontend (tùy chọn)
+    │
+API Gateway :8080
+    ├── Identity :8081              → identity_db
+    ├── Organization-Customer :8082 → organization_customer_db
+    ├── Inventory :8083             → inventory_db
+    ├── Rental :8084                → rental_db
+    └── AI Assistant :8090          → Ollama (tùy chọn)
 
----
+Rental ── internal REST API ──→ Inventory
+AI ── REST API qua Gateway ──→ các dịch vụ theo quyền người hỏi
+```
 
-## Tô Trung Tuấn — Identity service
+Bốn dịch vụ dùng các database riêng trên cùng MySQL instance trong môi trường local. Gateway định tuyến, xử lý CORS, chuyển tiếp mã truy vết và chuẩn hóa một số lỗi kết nối; quyền truy cập và nghiệp vụ được kiểm tra tại service đích. Đường dẫn `/internal/**` của Inventory không được mở qua Gateway công khai.
 
-Nguồn để xem: `../backend/services/identity-service`.
+AI được chạy từ repository Python riêng. Module Java `services/ai-service` còn trong source tham khảo, không chạy đồng thời với AI Python vì cùng sử dụng cổng `8090`.
 
-### P0 — bắt buộc cho demo
+### Điểm kỹ thuật
 
-Chuyển nghiệp vụ từ `AuthController.java` và phần service/repository/DTO mà controller dùng:
+- **Ranh giới dịch vụ:** mỗi service sở hữu database và nghiệp vụ riêng; Rental trao đổi với Inventory qua REST API thay vì đọc chéo bảng.
+- **Bảo mật nhiều lớp:** Gateway là điểm vào chung; service đích kiểm tra JWT, permission, organization/branch scope và quyền sở hữu tài liệu của Customer.
+- **Tính nhất quán:** transaction và khóa bản ghi cho các bước nghiệp vụ quan trọng; nhật ký bù trừ/thử lại cho thao tác Rental–Inventory, `requestKey` chống ghi trùng.
+- **Khả năng truy vết:** chuyển tiếp `X-Trace-Id`, health endpoint và lịch sử giao dịch/biên bản; giữ riêng tiền thuê với tiền cọc.
+- **Kiểm thử:** unit/controller test cho validation, phân quyền, chuyển trạng thái và lỗi tích hợp; workflow test với API thật được cung cấp ở repository frontend.
 
-- `POST /api/v1/auth/register`
-- `POST /api/v1/auth/login`
-- `POST /api/v1/auth/refresh`
-- `POST /api/v1/auth/logout`
-- `GET /api/v1/auth/me`
-- `PUT /api/v1/auth/me`
-- `PUT /api/v1/auth/password`
+Có thể bắt đầu đọc source tại [cấu hình Gateway](api-gateway/src/main/resources/application.yml), [bộ kiểm tra session dùng chung](shared/common-security/src/main/java/com/equipmentrental/common/security/LiveSessionValidator.java), [InventoryClient](services/rental-service/src/main/java/com/equipmentrental/rental/client/InventoryClient.java) và [nhật ký đồng bộ](services/rental-service/src/main/java/com/equipmentrental/rental/service/DemoSyncJournal.java).
 
-Tối thiểu cần các bảng/user model, password hash, JWT access + refresh session, role, organization scope và branch scope. Frontend đang gọi các endpoint trên nên giữ body/response tương thích source cũ trước khi tự đổi contract.
+## Công nghệ
 
-### P1 — Admin quản lý tài khoản
+- Java 21, Spring Boot 3.4, Spring Cloud Gateway và Maven multi-module.
+- Spring Security, JWT, phân quyền theo vai trò/quyền và phạm vi tổ chức/chi nhánh.
+- Spring Data JPA, Hibernate, MySQL 8; schema, migration và seed SQL được lưu trong repository.
+- Docker Compose cho MySQL; các ứng dụng Java chạy riêng khi phát triển local.
+- JUnit, Mockito và Spring Test; kiểm thử workflow/API thật từ repository frontend.
+- AI tùy chọn: Python 3.12+, FastAPI, Ollama và công cụ tra cứu REST API.
 
-Chuyển từ `IdentityManagementController.java`:
+## Chức năng
 
-- Role/permission: list, create, update, delete, gán permission cho role.
-- User: list/detail/create, đổi role, đổi scope, lock/unlock, reset password, soft-delete.
-- Session: list session user và revoke session.
+| Thành phần            | Chức năng chính                                                                                                      | Cổng   |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------- | ------ |
+| API Gateway           | Định tuyến API, CORS, health endpoint, `X-Trace-Id`, phản hồi lỗi downstream 503/504.                                | `8080` |
+| Identity              | Đăng ký/đăng nhập, hồ sơ, mật khẩu, user, role, permission, scope và quản lý phiên đăng nhập.                        | `8081` |
+| Organization-Customer | Tổ chức, chi nhánh, nhân viên, phân công/chuyển chi nhánh, khách hàng và liên kết tài khoản Customer.                | `8082` |
+| Inventory             | Danh mục, brand/type/model, thiết bị, kho, nhập/xuất/chuyển/kiểm kê, lịch trống, giữ chỗ, giao/nhận và bảo trì demo. | `8083` |
+| Rental                | Yêu cầu thuê, báo giá, đơn thuê, hợp đồng, phụ lục/gia hạn, giá thuê/mã giảm giá và chứng từ tài chính demo.         | `8084` |
+| AI Assistant          | Tra cứu dữ liệu theo quyền cho Admin/Manager, diễn đạt kết quả và hỗ trợ chế độ nhẹ không cần model.                 | `8090` |
 
-Các path cần có: `/api/v1/users/**`, `/api/v1/roles/**`, `/api/v1/permissions/**`, `/api/v1/sessions/**`.
+### Các ràng buộc nghiệp vụ
 
-### P2 — làm sau
+- Customer chỉ truy cập hồ sơ thuê thuộc tài khoản đã liên kết; đổi ID trên URL không thay đổi quyền sở hữu.
+- Báo giá hết hạn không được duyệt/chấp nhận/chuyển đơn. Số tiền không âm; giảm giá không vượt giá trị đơn.
+- Giữ chỗ phải đủ đúng số lượng từng loại thiết bị, kiểm tra thời gian trùng và trạng thái khả dụng. Các bước quan trọng có khóa bản ghi để kiểm soát thao tác đồng thời.
+- Hợp đồng bị từ chối được sửa/gửi duyệt lại với cùng mã/ID. Gia hạn đi qua phụ lục hợp đồng, không cập nhật trực tiếp từ màn hình đơn thuê.
+- Thu tiền thuê và cọc được ghi riêng. Không thu vượt công nợ/cọc yêu cầu; không hoàn/khấu trừ vượt số cọc đang giữ.
+- COD chỉ được ghi nhận đã thu sau bàn giao. Thanh lý cần có biên bản trả, tất toán tiền thuê và xử lý hết cọc.
+- Thiết bị trả về POOR/DAMAGED chuyển sang INSPECTION; thiết bị đang cho thuê/bảo trì không được xem là sẵn sàng.
+- Rental lưu ý định đồng bộ trước khi đổi Inventory. Rollback dùng bù trừ; thao tác chưa xác định kết quả được lưu để người có quyền thử lại, chống ghi trùng bằng `requestKey`.
+- Sau logout, reset mật khẩu hoặc thu hồi phiên, token bị từ chối ở request bảo vệ kế tiếp, kể cả gọi trực tiếp service. Identity phải hoạt động để các service xác minh session.
 
-Email verification code, verify email, forgot-password/reset-password public flow trong `AuthController`. Không bỏ code cũ; chỉ chưa cần đưa vào demo đầu tiên.
+## Chạy local từ máy mới
 
-**Definition of done:** test login → refresh → `/me` → logout; token mang role, organizationId và branchIds; migration chạy trên database trống.
+Các lệnh dưới đây dành cho Bash trên Linux/WSL. Cần Java 21, Maven, Docker với Compose v2, Git, OpenSSL và curl để kiểm tra API. Không cần Node.js, Python hoặc Ollama để chạy backend lõi.
 
----
+### 1. Clone backend
 
-## Bùi Nhật Long — Organization-Customer service
-
-Nguồn để xem: `../backend/services/organization-customer-service`.
-
-### P0 — bắt buộc
-
-Chuyển use case từ các controller sau:
-
-| Controller cũ | Chức năng cần chuyển |
-|---|---|
-| `OrganizationController` | Tạo, list, detail, update, soft-delete organization |
-| `BranchController` | CRUD branch theo organization |
-| `EmployeeController` | CRUD employee theo organization |
-| `EmployeeBranchAssignmentController` | Gán employee vào branch, list assignment, deactivate assignment |
-| `CustomerController` | CRUD customer, list/filter, detail, ownership lookup |
-
-Giữ các namespace cũ: `/api/v1/organizations/**`; employee/customer nằm dưới organization theo mapping source cũ.
-
-### P1/P2
-
-- P1: `CustomerGroupController` — CRUD group và add/remove/list members.
-- P2: `RestrictedCustomerController` — tạo restriction, list/check/remove restriction.
-
-**Definition of done:** tạo organization → branch → employee → assign branch → customer chạy qua Gateway. Không gọi thẳng `identity_db`; chỉ lưu ID/scope do Identity cấp.
-
----
-
-## Tô Trung Tuấn và Trần Minh Tú — Inventory service
-
-Nguồn để xem: `../backend/services/inventory-service`.
-
-Phân chia trong cùng module để tránh sửa trùng file:
-
-- **Tô Trung Tuấn:** `EquipmentCategoryController`, `EquipmentController`, cùng entity/DTO/service/repository cho danh mục, brand, type, model và thiết bị.
-- **Trần Minh Tú:** `AvailabilityController`, `InternalReservationController`, `EquipmentReservationController`, các internal query/status endpoint, warehouse và nghiệp vụ nhập/xuất/chuyển kho.
-
-### P0 — bắt buộc để Rental chạy
-
-| Owner | Controller cũ | Chức năng cần chuyển |
-|---|---|---|
-| Tô Trung Tuấn | `EquipmentCategoryController` | CRUD/active category `/api/v1/inventory/categories` |
-| Tô Trung Tuấn | `EquipmentController` | CRUD equipment, filter/list/detail, status, search serial/IMEI/MAC |
-| Trần Minh Tú | `AvailabilityController` | API nội bộ kiểm tra availability cho Rental |
-| Trần Minh Tú | `InternalReservationController` | Create/confirm/release reservation cho Rental |
-| Trần Minh Tú | `EquipmentReservationController` | List/detail reservation để Manager xem |
-| Trần Minh Tú | `InternalEquipmentQueryController`, `InternalEquipmentStatusController` | Rental/Operations query và update trạng thái nội bộ |
-
-P0 phải quyết định rõ trạng thái thiết bị và rule reserve/release để Rental không giữ chỗ hai lần.
-
-### P1
-
-- **Tô Trung Tuấn:** `BrandController`, `EquipmentTypeController`, `EquipmentModelController`.
-- **Trần Minh Tú:** `WarehouseController`, `StockInController`, `StockOutController`, `StockTransferController`.
-
-### P2
-
-- **Tô Trung Tuấn:** `EquipmentAccessoryController`, `EquipmentImageController`, `EquipmentQrController`, `EquipmentStatusHistoryController`.
-- **Trần Minh Tú:** `EquipmentTransactionController`, `StockAuditController`, `InternalEquipmentCheckoutController`, `InternalEquipmentCheckinController`.
-
-Public path vẫn là `/api/v1/inventory/**`. Path `/internal/**` chỉ cho Rental/Operations service, không đi qua public Gateway trừ khi bạn chủ động mở route mới.
-
-**Definition of done:** admin tạo category/equipment; Rental gọi availability → create reservation → confirm/release; test concurrent reservation tối thiểu cho cùng một equipment.
-
----
-
-## Phạm Quốc Việt — Rental service
-
-Nguồn để xem: `../backend/services/rental-service`.
-
-### P0 — luồng demo chính
-
-Chuyển từ `RentalWorkflowController.java`:
-
-1. Rental request: create, list, detail, update, cancel.
-2. Quotation: create, list, detail, send, update, approve, reject có reason, accept.
-3. Convert quotation sang rental order.
-4. Rental order: list, detail, reserve, confirm, cancel.
-5. Availability/equipment search dùng dữ liệu Inventory qua internal API, không copy bảng equipment qua Rental.
-
-Chuyển từ `ContractController.java` sau khi order ổn:
-
-- Create/list/detail contract.
-- Approve/reject có reason/sign/cancel/liquidate.
-- Extension và appendix có thể làm sau nhưng giữ DTO/path để frontend không lệch.
-
-### P1/P2
-
-- P1: `PricingController` — rental prices và discount codes.
-- P2: `InternalRentalOwnershipController` — ownership check cho service khác.
-
-Public path bắt buộc: `/api/v1/rental-requests/**`, `/api/v1/quotations/**`, `/api/v1/rental-orders/**`, `/api/v1/rental-contracts/**`, `/api/v1/availability/**`, `/api/v1/equipment/search`, `/api/v1/rental-prices/**`, `/api/v1/discount-codes/**`.
-
-**Definition of done:** customer/sales tạo request → sales tạo quotation → manager approve/reject → convert order → Inventory reserve → contract. Cả luồng phải có integration test với mock HTTP Inventory hoặc test container.
-
----
-
-## Việc của Phạm Đình Đức Vượng — Gateway và AI
-
-### Gateway
-
-Routes đã khai báo sẵn trong `api-gateway/src/main/resources/application.yml` cho đúng các path P0/P1 ở trên. Khi người khác thêm public path mới, chỉ sửa file này sau khi có controller test downstream. Không biến Gateway thành nơi chứa nghiệp vụ, database hoặc JWT business logic; service đích phải tự authorize.
-
-Test tối thiểu trước merge Gateway:
+Chạy tại thư mục muốn lưu dự án:
 
 ```bash
-mvn -pl api-gateway test
-mvn -pl api-gateway spring-boot:run
-curl http://localhost:8080/actuator/health
-```
-
-### AI service
-
-AI chạy từ project riêng `E:\equipment-rental-AI` bằng PowerShell trên Windows; không chạy module Java `services/ai-service` trong repository này vì cả hai đều dùng port `8090`. Gateway chạy trong WSL tự tìm Windows host IP và chuyển `POST /api/v1/ai/chat` tới AI FastAPI.
-
-AI cần Gateway tại `http://localhost:8080` để xác thực token qua Identity và lấy dữ liệu nghiệp vụ. Chỉ role `ADMIN` và `MANAGER` được dùng chat. AI chỉ gọi API qua Gateway, không truy cập trực tiếp database của các service Java.
-
-Trong `E:\equipment-rental-AI\.env` đặt:
-
-```env
-APP_HOST=0.0.0.0
-APP_PORT=8090
-API_GATEWAY_BASE_URL=http://localhost:8080
-OLLAMA_BASE_URL=http://127.0.0.1:11434
-OLLAMA_MODEL=viet-tutor-frog
-```
-
-Chạy AI bằng PowerShell:
-
-```powershell
-cd E:\equipment-rental-AI
-& .\.venv-win\Scripts\Activate.ps1
-python run.py
-```
-
-Chạy các service Java bằng `./scripts/run-local-service.sh <service>` để script tự cập nhật `AI_SERVICE_URL` từ default route WSL khi Windows/WSL đổi IP. Không cần Docker Ollama nếu Ollama đã chạy trên Windows và đã có model đã chọn.
-
-Script sẽ tự cài ba module dùng chung (`common-web`, `common-security`, `event-contracts`) vào Maven local repository trước khi chạy service. Lần đầu có thể lâu hơn vì Maven tải dependency và compile.
-
-Không dùng `source .env` trực tiếp để chạy Java service: `DB_URL` có ký tự `&` và Bash có thể diễn giải sai. Luôn dùng script trên để nạp `.env` an toàn.
-
----
-
-## Cách chạy chung
-
-Các lệnh dưới đây chạy trong WSL/Linux, từ folder `backend_microservice`. Máy cần Java 21, Maven và Docker Compose. Chưa cần bật AI để thử đăng nhập, khách hàng, thiết bị/kho và luồng thuê.
-
-### 1. Chuẩn bị `.env` và MySQL
-
-```bash
-cd ~/backend_microservice
-# Chỉ copy lần đầu; giữ .env đã cấu hình nếu file đã có.
-test -f .env || cp .env.example .env
-
-# Sinh JWT secret, rồi copy kết quả vào JWT_SECRET_BASE64 trong .env.
+git clone https://github.com/Microservice-Project-w3w/BE_Service.git backend_microservice
+cd backend_microservice
+cp .env.example .env
 openssl rand -base64 32
 ```
 
-Mở `.env` và kiểm tra:
+Điền kết quả sinh secret vào `JWT_SECRET_BASE64` trong `.env`. Chỉ sao chép `.env` ở lần thiết lập đầu tiên, không ghi đè cấu hình riêng khi cập nhật code.
 
-- `JWT_SECRET_BASE64`: thay dòng placeholder bằng secret vừa sinh. Tất cả service trên cùng máy dùng chung file `.env` này.
-- `MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD`, `DB_PASSWORD`: phải khớp mật khẩu MySQL đang dùng.
-- `MYSQL_PORT`: mặc định bản demo là `3307`, tránh trùng MySQL local ở `3306`. Nếu đổi port, sửa cả port trong `DB_URL`.
-- Giữ nguyên tên database: `identity_db`, `organization_customer_db`, `inventory_db`, `rental_db`.
-- `MAIL_USERNAME`/`MAIL_PASSWORD` có thể để trống khi chỉ thử bằng tài khoản demo, không gửi email.
+| Cấu hình                                               | Cần kiểm tra                                                                           |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| `MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD`, `DB_PASSWORD` | Dùng mật khẩu local của bạn; với cấu hình root mặc định, ba giá trị phải khớp nhau.    |
+| `MYSQL_HOST`, `MYSQL_PORT`                             | Mặc định `localhost:3307`, tránh trùng MySQL local ở `3306`.                           |
+| `DB_URL`                                               | JDBC URL của Rental; cổng phải khớp `MYSQL_PORT`, database vẫn là `rental_db`.         |
+| `JWT_SECRET_BASE64`, `JWT_ISSUER`                      | Dùng chung giữa các service trên cùng môi trường.                                      |
+| `FRONTEND_URL`                                         | Origin frontend được CORS cho phép, mặc định `http://localhost:5173`.                  |
+| `AI_SERVICE_RUNS_ON_WINDOWS`                           | `true` khi AI chạy Windows còn Gateway ở WSL; `false` khi không dùng cách kết nối này. |
+| `AI_SERVICE_URL`                                       | Nếu AI chạy cùng Linux/WSL, đặt `http://localhost:8090` và tắt cờ Windows.             |
+| `MAIL_USERNAME`, `MAIL_PASSWORD`                       | Có thể để trống khi dùng tài khoản seed và không thử gửi email.                        |
 
-Không commit `.env` hay mật khẩu SMTP/JWT thật. `.env.example` là mẫu cấu hình để mọi người tự tạo `.env` trên máy mình. Không dùng `source .env`; script chạy service sẽ nạp file này an toàn.
+Giữ nguyên tên `identity_db`, `organization_customer_db`, `inventory_db`, `rental_db`. Không commit `.env` hoặc secret thật. Không dùng `source .env`: JDBC URL có ký tự `&`; script chạy local đã nạp cấu hình an toàn.
+
+### 2. Khởi động MySQL
+
+Từ thư mục backend:
 
 ```bash
-docker compose --env-file .env -f infra/docker-compose.yml up -d
+docker compose --env-file .env -f infra/docker-compose.yml up -d mysql
 docker compose --env-file .env -f infra/docker-compose.yml ps
 ```
 
-Chờ service `mysql` hiện `healthy`. Lệnh trên không bật Ollama/AI vì không dùng `--profile ai`.
+Chờ `mysql` hiển thị `healthy`. Lệnh chỉ chạy MySQL, không tải image Ollama hoặc model AI. MySQL publish cổng `3307` theo `.env`, cổng bên trong container vẫn là `3306`.
 
-Schema bốn database nằm trong `infra/mysql/init/01-core-service-schema.sql`. MySQL tự nạp schema khi tạo volume trống **lần đầu**, không tự nạp lại khi `git pull` hoặc restart container. Seed bên dưới chỉ nạp dữ liệu, không thay thế việc tạo schema. Nếu đang dùng volume cũ mà báo thiếu bảng/cột, kiểm tra schema/migration trước; **không chạy `docker compose down -v` để chữa lỗi** vì sẽ xóa dữ liệu.
+Schema trong `infra/mysql/init/` được nạp khi tạo volume trống lần đầu. Restart container hoặc `git pull` không tự chạy lại SQL khởi tạo. Không dùng `docker compose down -v` để sửa lỗi schema vì sẽ xóa dữ liệu.
 
-## Dữ liệu demo
+### 3. Khởi động Identity và nạp seed
 
-### 2. Khởi động Identity trước
-
-Trong terminal thứ nhất:
+Terminal thứ nhất, tại thư mục backend:
 
 ```bash
-cd ~/backend_microservice
 bash scripts/run-local-service.sh identity-service
 ```
 
-Chờ log `Started IdentityServiceApplication`, giữ terminal này chạy. Identity tự nạp role/permission từ `services/identity-service/src/main/resources/security/`; script cũng tự cài các module Maven dùng chung, không cần build từng thư viện bằng tay.
+Chờ `Started IdentityServiceApplication`, giữ terminal chạy. Identity nạp role/permission từ `services/identity-service/src/main/resources/security/`.
 
-### 3. Nạp seed
-
-Mở terminal thứ hai:
+Terminal thứ hai, cũng tại thư mục backend:
 
 ```bash
-cd ~/backend_microservice
 bash scripts/load-demo-seed.sh
 ```
 
-Thành công sẽ hiện `Demo data loaded. Demo account password: Demo@123`.
+Script dùng MySQL trong Compose, không yêu cầu cài MySQL client riêng. Nó nạp tổ chức, hai chi nhánh, khách hàng/nhân viên, năm tài khoản, thiết bị/kho và hồ sơ thuê mẫu; đồng thời chuẩn bị Customer portal và các bảng chứng từ/bảo trì demo.
 
-Script đọc cấu hình MySQL từ `.env`, dùng container `mysql` trong Compose và nạp đúng thứ tự sau; không cần cài thêm MySQL client trên WSL hoặc chạy từng file SQL bằng tay:
+Chỉ seed database dev/demo. Chạy lại seed có thể đặt lại mật khẩu, trạng thái và thời gian của bản ghi mẫu dù không truncate database. Seed trước khi bật Inventory/Rental; không nạp lại nếu cần giữ nguyên phiên demo đang thực hiện.
 
-| File trong `infra/mysql/seed/` | Dữ liệu |
-|---|---|
-| `01-organization-customer-demo.sql` | Tổ chức, hai chi nhánh, nhân viên, hai khách hàng |
-| `02-identity-demo.sql` | Năm tài khoản demo và phạm vi chi nhánh |
-| `03-organization-customer-assignments-demo.sql` | Liên kết user với nhân viên/khách hàng và phân công chi nhánh |
-| `04-inventory-demo.sql` | Danh mục, brand/type/model, kho, bốn thiết bị, reservation và phiếu kho/kiểm kê |
-| `05-rental-demo.sql` | Giá thuê, mã giảm giá, yêu cầu thuê, báo giá, đơn thuê, hợp đồng và phụ lục |
+### 4. Khởi động các service còn lại
 
-**Chỉ dùng seed trên database dev/demo.** Có thể chạy lại, nhưng mỗi lần chạy sẽ cập nhật dữ liệu mẫu: mật khẩu về `Demo@123`, trạng thái về trạng thái seed và thời gian thuê/giữ chỗ được làm mới. Vì vậy các thao tác đã thử trên bản ghi demo có thể bị đặt lại. Script không xóa/truncate database; nếu cần giữ trạng thái demo đang làm thì không nạp lại. Nên seed trước khi bật Inventory/Rental, tránh thao tác hoặc job giữ chỗ chạy đồng thời.
-
-### 4. Bật các service còn lại và đăng nhập frontend
-
-Giữ Identity chạy. Mở thêm bốn terminal tại folder `backend_microservice`, **mỗi terminal chạy một lệnh**, không paste cả khối vào cùng một terminal:
+Mỗi dòng dưới đây chạy trong **một terminal riêng**, tại thư mục backend:
 
 ```bash
 bash scripts/run-local-service.sh organization-customer-service
@@ -285,51 +146,217 @@ bash scripts/run-local-service.sh rental-service
 bash scripts/run-local-service.sh api-gateway
 ```
 
-Chờ từng service báo `Started ...Application`, sau đó mở frontend đã chạy bằng `npm run dev` (mặc định `http://localhost:5173`). Frontend gọi Gateway ở `http://localhost:8080`, không gọi trực tiếp port của từng service. Sau khi đổi role/quyền hoặc seed lại, đăng xuất và đăng nhập lại để nhận token mới.
+Script tự cài `common-web`, `common-security`, `event-contracts` vào Maven local repository trước khi chạy module đã chọn. Lần đầu cần tải dependency; không phải tự build từng thư viện chung. Chờ từng service báo startup thành công.
 
-Mật khẩu chung cho cả năm tài khoản: **`Demo@123`**.
+### 5. Kiểm tra API, không cần frontend
 
-| Đăng nhập | Vai trò | Dùng để demo |
-|---|---|---|
-| `rentai.demo.admin@gmail.com` | Admin | tài khoản, tổ chức, chi nhánh, danh mục |
-| `rentai.demo.manager@gmail.com` | Manager | duyệt báo giá, đơn thuê, hợp đồng, AI chat |
-| `rentai.demo.sales@gmail.com` | Sales | khách hàng, yêu cầu thuê và báo giá |
-| `rentai.demo.operations@gmail.com` | Operations | thiết bị, kho, nhập/xuất/chuyển/kiểm kê |
-| `rentai.demo.customer@gmail.com` | Customer | xem thiết bị/lịch trống, gửi yêu cầu, chấp nhận báo giá và theo dõi đơn/hợp đồng của mình |
-
-Seed tạo một tổ chức, hai chi nhánh, hai khách hàng, danh mục/kho/bốn thiết bị với các trạng thái sẵn sàng–giữ chỗ–bảo dưỡng, cùng luồng thuê có yêu cầu mới, báo giá chờ duyệt, đơn đã giữ chỗ, hợp đồng chờ duyệt và hợp đồng đang hiệu lực.
-
-Luồng thử đầy đủ: Operations chuẩn bị thiết bị → Sales tạo yêu cầu/báo giá → Manager duyệt → Sales ghi nhận khách chấp nhận và chuyển thành đơn → Manager giữ chỗ, xác nhận giữ chỗ → Sales tạo hợp đồng → Manager duyệt → Sales ghi nhận đã ký. Gia hạn làm trên hợp đồng qua phụ lục duyệt/ký, không gia hạn trực tiếp đơn thuê.
-
-### Nếu seed chưa chạy được
-
-- `Missing .../.env`: tạo `.env` từ `.env.example`, điền cấu hình như bước 1.
-- `Identity role seed is missing`: khởi động Identity và chờ startup hoàn tất trước khi chạy lại seed.
-- `service "mysql" is not running`: chạy Compose ở bước 1, chờ MySQL healthy.
-- `Access denied`: kiểm tra `.env` có đúng mật khẩu của **volume MySQL hiện có** không. Đổi mật khẩu trong `.env` không tự đổi mật khẩu database trong volume cũ.
-- `Table ... doesn't exist` hoặc `Unknown column`: kiểm tra schema/migration của database đang dùng; không xóa volume hay nạp seed liên tục để sửa lỗi schema.
-
-Khi đưa lên Git, giữ đủ `.env.example`, `infra/mysql/init/`, `infra/mysql/seed/`, `scripts/load-demo-seed.sh` và `scripts/run-local-service.sh`. Các file này đã có trong repo; người kéo code chỉ cần cấu hình `.env` riêng rồi làm theo thứ tự trên. AI là phần tùy chọn, cách chạy riêng ở mục AI service phía trên.
-
-### Customer portal
-
-Nếu máy đã có seed, chạy lệnh này một lần để thêm bảng liên kết và cấp chi nhánh cho tài khoản Customer demo; **không cần nạp lại toàn bộ seed**:
+Mở terminal mới sau khi các service startup thành công:
 
 ```bash
-cd ~/backend_microservice
-bash scripts/enable-customer-portal-demo.sh
+curl --connect-timeout 3 --max-time 5 http://localhost:8080/actuator/health
+curl --connect-timeout 3 --max-time 5 http://localhost:8080/gateway/health/identity
+curl --connect-timeout 3 --max-time 5 http://localhost:8080/gateway/health/organization-customer
+curl --connect-timeout 3 --max-time 5 http://localhost:8080/gateway/health/inventory
+curl --connect-timeout 3 --max-time 5 http://localhost:8080/gateway/health/rental
 ```
 
-Sau đó khởi động lại Organization-Customer và Rental bằng `scripts/run-local-service.sh`, đăng xuất/đăng nhập lại Customer để nhận JWT có chi nhánh. Frontend mở `/customer/equipment`. Máy mới dùng `load-demo-seed.sh` như trên; script đã nạp thêm `06-customer-portal-demo.sql`.
+Đăng nhập tài khoản seed qua Gateway:
 
-Tài khoản demo được liên kết với `DEMO-CUS-BIZ`, nên thấy các yêu cầu/báo giá/đơn/hợp đồng của khách này. `owner_user_id` vẫn là Sales phụ trách; tài khoản đăng nhập nằm ở bảng riêng `customer_portal_accounts`. Rental gọi Organization-Customer bằng chính bearer token của khách để xác định quyền OWN; không nhận customerId tùy ý từ trình duyệt và không đọc chéo database.
+```bash
+curl --max-time 15 -i -X POST http://localhost:8080/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"rentai.demo.admin@gmail.com","password":"Demo@123"}'
+```
 
-Luồng thử: Customer chọn loại thiết bị → kiểm tra thời gian và số lượng → gửi yêu cầu → Sales lập/gửi báo giá → Manager duyệt → Customer đọc và chấp nhận báo giá → Sales chuyển thành đơn → Manager giữ chỗ/xác nhận → Sales tạo hợp đồng → Manager duyệt → Sales ghi nhận chữ ký đã có. Customer chỉ xem tiến trình đơn và hợp đồng, chưa ký điện tử hoặc tự xác nhận giao hàng/thanh toán.
+Copy `data.accessToken` từ JSON trả về rồi dùng cho các request được bảo vệ:
 
-Tài khoản Customer mới đăng ký chưa tự có tổ chức/chi nhánh hoặc hồ sơ khách hàng. Admin cấp scope ở trang Tài khoản, Sales tạo hồ sơ khách hàng thuộc chi nhánh tương ứng, rồi Admin gọi:
+```bash
+ACCESS_TOKEN='PASTE_ACCESS_TOKEN_HERE'
+curl --max-time 15 http://localhost:8080/api/v1/auth/me \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+curl --max-time 15 'http://localhost:8080/api/v1/rental-orders?organizationId=1&branchId=1' \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+```
 
-- `PUT /api/v1/organizations/{organizationId}/customers/{customerId}/portal-account`, body `{"userId": 5}`, với token Admin.
-- `DELETE` cùng đường dẫn để gỡ liên kết. Mỗi tài khoản chỉ liên kết một hồ sơ; gỡ liên kết cũ trước khi đổi.
-- `GET /api/v1/organizations/{organizationId}/customers/me` dùng token Customer để kiểm tra liên kết.
+Với Postman: đặt base URL `http://localhost:8080`, gửi request login ở trên, sau đó chọn **Authorization → Bearer Token** và nhập `data.accessToken`. Body của request ghi dữ liệu dùng **raw → JSON**. ID `1` trong ví dụ thuộc dữ liệu seed; thay bằng ID thực tế nếu sử dụng dữ liệu khác. Không đưa access/refresh token thật vào Git hoặc ảnh minh họa công khai.
 
-Backend kiểm tra tài khoản được liên kết phải là CUSTOMER, ACTIVE, cùng tổ chức và có chi nhánh của hồ sơ. Customer không đọc danh sách hồ sơ khách hàng khác và không truy cập được tài liệu thuê của họ bằng cách đổi ID trên URL. Billing, Logistics, Maintenance và AI cho Customer vẫn không mở trong portal.
+### Giao diện web (tùy chọn)
+
+Nếu cần trình diễn bằng giao diện, clone [frontend](https://github.com/Microservice-Project-w3w/FE_service) và làm theo README của repository đó; cần thêm Node.js 24/npm. Frontend mặc định chạy tại `http://localhost:5173` và gọi Gateway `8080`. Bước này không bắt buộc để chạy hay kiểm thử các API backend.
+
+### Tài khoản demo
+
+Mật khẩu chung: `Demo@123`. Chỉ dùng trong môi trường local/demo.
+
+| Vai trò    | Email                              | Phạm vi thử nghiệm                                            |
+| ---------- | ---------------------------------- | ------------------------------------------------------------- |
+| Admin      | `rentai.demo.admin@gmail.com`      | Tài khoản, tổ chức, chi nhánh, danh mục, liên kết Customer.   |
+| Manager    | `rentai.demo.manager@gmail.com`    | Duyệt, giữ chỗ/xác nhận đơn, chứng từ, bảo trì và AI.         |
+| Sales      | `rentai.demo.sales@gmail.com`      | Khách hàng, yêu cầu thuê, báo giá và hợp đồng.                |
+| Operations | `rentai.demo.operations@gmail.com` | Thiết bị/kho, giao/nhận và bảo trì.                           |
+| Customer   | `rentai.demo.customer@gmail.com`   | Danh mục, lịch trống và quy trình thuê của hồ sơ đã liên kết. |
+
+Seed không tạo sẵn Accountant. Sau khi đổi role/scope hoặc nạp lại seed, đăng xuất và đăng nhập lại để nhận token mới.
+
+## Kịch bản trình diễn
+
+Có thể thực hiện bằng curl/Postman. Chọn token của vai trò tương ứng; HTTP method và body được định nghĩa tại controller/DTO trong từng service.
+
+1. Operations chuẩn bị thiết bị khả dụng trong kho.
+2. Customer hoặc Sales tạo yêu cầu thuê; Sales lập/gửi báo giá.
+3. Manager duyệt; Customer chấp nhận hoặc Sales ghi nhận chấp nhận, rồi chuyển thành đơn.
+4. Manager giữ chỗ và xác nhận đơn; Sales tạo hợp đồng, Manager duyệt.
+5. Qua các API con của `/api/v1/rental-orders/{id}`, ghi nhận ký bằng `/demo-signature`, phát hành `/invoice` và thu cọc qua `/transactions/DEPOSIT_COLLECT`.
+6. Operations bàn giao qua `/handovers/DELIVERED`; Admin/Manager ghi nhận tiền thuê COD bằng `/transactions/PAYMENT`, có thể thu một phần rồi thu nốt.
+7. Operations nhận trả qua `/handovers/RETURNED`; Admin/Manager hoàn/khấu trừ cọc và gọi `/demo-liquidate` sau tất toán.
+8. Nếu thiết bị cần sửa, tạo phiếu qua `/api/v1/inventory/maintenance`, bắt đầu và hoàn thành bảo trì.
+
+Customer mới chưa có liên kết tự động: Admin cấp tổ chức/chi nhánh, Sales tạo hồ sơ khách hàng; Admin liên kết bằng `PUT /api/v1/organizations/{organizationId}/customers/{customerId}/portal-account`, body `{"userId": <id>}`. Backend kiểm tra tài khoản CUSTOMER đang ACTIVE, cùng tổ chức và có chi nhánh tương ứng.
+
+### Cập nhật máy đã có dữ liệu
+
+Không cần nạp lại seed để thêm các chức năng demo:
+
+```bash
+bash scripts/enable-customer-portal-demo.sh
+bash scripts/enable-demo-operations.sh
+```
+
+Sau đó khởi động lại các service và đăng nhập lại. Bước thứ hai chỉ tạo thêm năm bảng `demo_*` trong database cũ. Với schema cũ khác nữa, kiểm tra migration phù hợp trước khi chạy; hai script này không thay thế mọi bước nâng cấp schema.
+
+## Trợ lý AI (tùy chọn)
+
+AI chạy từ [Equipment-Rental-AI](https://github.com/Microservice-Project-w3w/Equipment-Rental-AI). Chỉ ADMIN/MANAGER được chat. Công cụ ưu tiên gọi REST API qua Gateway bằng token người hỏi, giới hạn theo permission, tổ chức và chi nhánh; không tự tạo/duyệt/hủy dữ liệu nghiệp vụ.
+
+Ví dụ thiết lập trên Windows, sau khi đã cài Python 3.12; có thể thay đường dẫn bằng thư mục khác:
+
+```powershell
+git clone https://github.com/Microservice-Project-w3w/Equipment-Rental-AI.git E:\equipment-rental-AI
+cd E:\equipment-rental-AI
+py -3.12 -m venv .venv-win
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+& .\.venv-win\Scripts\Activate.ps1
+python -m pip install -e ".[test]"
+Copy-Item .env.example .env
+```
+
+Chỉnh `.env` của AI trước khi chạy; đây là file riêng, không phải `.env` backend:
+
+```dotenv
+APP_HOST=0.0.0.0
+APP_PORT=8090
+API_GATEWAY_BASE_URL=http://localhost:8080
+CHAT_MODE=light
+CHAT_ENABLED_SERVICES=inventory,rental,organization-customer
+```
+
+```powershell
+python run.py
+```
+
+`light` dùng các mẫu câu tra cứu, không cần Ollama. Để chat qua model, đổi `CHAT_MODE=natural`, đặt `OLLAMA_BASE_URL` và `OLLAMA_MODEL` đúng model đã có, ví dụ `viet-tutor-frog`. Model tùy chỉnh không nằm trong repository và máy mới có thể chưa có; kiểm tra bằng `ollama list`, không mặc định tải model khi chỉ chạy backend.
+
+Nếu AI chạy Windows và Gateway chạy WSL, bật `AI_SERVICE_RUNS_ON_WINDOWS=true` ở backend rồi khởi động Gateway bằng script. Script tự tìm Windows host qua default route WSL; có thể đặt `WSL_WINDOWS_HOST` nếu cần. Đảm bảo Windows Firewall cho phép kết nối từ WSL đến port `8090`, chỉ trong phạm vi mạng phát triển cần thiết.
+
+Kiểm tra từ WSL:
+
+```bash
+curl --connect-timeout 3 --max-time 5 http://localhost:8080/gateway/health/ai
+```
+
+Tra cứu API thật cần service chứa dữ liệu tương ứng: tồn kho cần Inventory; báo giá/hợp đồng cần Rental; khách hàng cần Organization-Customer; lịch trống cần Rental + Inventory. Gateway, Identity và AI luôn cần cho chat; MySQL phục vụ dữ liệu.
+
+Máy ít RAM có thể bật DB fallback: khi API nghiệp vụ mất kết nối/timeout/502/503/504, AI đọc các view bằng tài khoản riêng chỉ có SELECT. Không fallback cho lỗi quyền hay khi Identity không hoạt động. Migration ở `infra/mysql/migrations/20261011_ai_readonly_views.sql`; thiết lập reader bằng hướng dẫn trong README AI, không cấp root hoặc quyền toàn database cho process chat.
+
+AI hiện tra cứu tồn kho/trạng thái thiết bị, lịch trống, báo giá/hợp đồng, kế hoạch nhận/trả dự kiến và khách hàng. Chưa nối các bảng hóa đơn/cọc, biên bản và phiếu bảo trì mới; không suy ra đã thu tiền hay đã giao/nhận từ giá trị hợp đồng hoặc ngày thuê.
+
+## API và kiểm thử
+
+Client sử dụng base URL `http://localhost:8080`. Các namespace chính:
+
+| Nhóm                 | Đường dẫn                                                                                                                                                                   |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Xác thực và quản trị | `/api/v1/auth`, `/api/v1/users`, `/api/v1/roles`, `/api/v1/permissions`, `/api/v1/sessions`                                                                                 |
+| Tổ chức/khách hàng   | `/api/v1/organizations/**`                                                                                                                                                  |
+| Thiết bị/kho/bảo trì | `/api/v1/inventory/**`                                                                                                                                                      |
+| Quy trình thuê       | `/api/v1/rental-requests`, `/api/v1/quotations`, `/api/v1/rental-orders`, `/api/v1/rental-contracts`                                                                        |
+| Tra cứu và giá       | `/api/v1/availability`, `/api/v1/equipment/search`, `/api/v1/rental-prices`, `/api/v1/discount-codes`                                                                       |
+| Chứng từ demo        | `/api/v1/rental-orders/{id}/demo-account`, `/invoice`, `/transactions/{kind}`, `/handovers/{kind}`, `/demo-signature`, `/demo-liquidate` (các path con cùng thuộc đơn thuê) |
+| Đồng bộ lỗi          | `/api/v1/rental-orders/{id}/sync-tasks` và `/{taskId}/retry` dưới path đó                                                                                                   |
+| AI                   | `/api/v1/ai/chat`, `/api/v1/ai/capabilities`                                                                                                                                |
+
+Request nghiệp vụ dùng `Authorization: Bearer <accessToken>`. Xem request/response và HTTP method chính xác trong controller của từng service. `GET /actuator/health` kiểm tra Gateway; `/gateway/health/{identity|organization-customer|inventory|rental|ai}` kiểm tra từng downstream, không thay thế kiểm thử nghiệp vụ.
+
+Kiểm thử các module Java và thư viện chung:
+
+```bash
+mvn -pl api-gateway,services/identity-service,services/organization-customer-service,services/inventory-service,services/rental-service -am clean test
+```
+
+Lệnh Maven trên kiểm thử backend mà không cần clone/chạy frontend. Các bộ tích hợp bổ sung được lưu tại repository frontend; nếu muốn chạy chúng, cài Node.js/npm và dependency ở repository đó, đồng thời bật MySQL, bốn service và Gateway:
+
+```bash
+npm run test:live
+npm run test:workflow
+npm run test:customer
+npm run test:demo
+```
+
+Các bộ workflow tạo dữ liệu riêng và có thể giữ chứng từ làm lịch sử; không chạy trên database production. `python -m pytest -q` trong dự án AI chạy test mặc định với backend/model giả lập, không tải model; test DB/runtime thật là opt-in theo README AI.
+
+Không chạy `clean/package` ghi đè JAR hoặc class đang được process khác sử dụng; dừng service cần build rồi khởi động lại sau build. Máy ít RAM nên kiểm thử nghiệp vụ trước, sau đó dừng các process Java do mình mở rồi kiểm thử AI riêng.
+
+## Cấu trúc repository
+
+```text
+api-gateway/       # Định tuyến, CORS, health, trace và lỗi kết nối
+services/
+├── identity-service/
+├── organization-customer-service/
+├── inventory-service/
+├── rental-service/
+└── ai-service/    # Module Java tham khảo; runtime AI ở repository Python
+shared/
+├── common-web/
+├── common-security/
+└── event-contracts/
+infra/mysql/       # Schema khởi tạo, migration và seed demo
+scripts/           # Chạy local, seed và cập nhật các bảng demo
+```
+
+Thay đổi API cần cập nhật DTO, kiểm thử, client frontend và Gateway nếu mở namespace mới. Service nghiệp vụ không đọc trực tiếp database của nhau; DB fallback AI là tùy chọn riêng, chỉ đọc các view được cấp quyền.
+
+## Nhóm thực hiện
+
+| Thành viên          | Phạm vi backend                                                                                 |
+| ------------------- | ----------------------------------------------------------------------------------------------- |
+| Phạm Đình Đức Vượng | API Gateway, CORS, health check, trợ lý AI và tích hợp các dịch vụ.                             |
+| Tô Trung Tuấn       | Xác thực, tài khoản, vai trò/quyền, phiên đăng nhập; danh mục, dữ liệu nền và CRUD thiết bị.    |
+| Trần Minh Tú        | Lịch trống, giữ chỗ, truy vấn/trạng thái thiết bị nội bộ; kho, nhập/xuất/chuyển kho và kiểm kê. |
+| Bùi Nhật Long       | Tổ chức, chi nhánh, nhân viên, khách hàng và phân công chi nhánh.                               |
+| Phạm Quốc Việt      | Yêu cầu thuê, báo giá, đơn thuê, hợp đồng, giá thuê và mã giảm giá.                             |
+
+## Xử lý lỗi thường gặp
+
+| Hiện tượng                                             | Kiểm tra                                                                                                                  |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| `Port ... already in use`                              | Xem process bằng `ss -ltnp`; dừng đúng service cũ hoặc đổi port và URL downstream tương ứng.                              |
+| Thiếu `common-web`/`common-security`/`event-contracts` | Chạy bằng `scripts/run-local-service.sh` để cài thư viện chung trước.                                                     |
+| `Identity role seed is missing`                        | Khởi động Identity, chờ startup hoàn tất rồi nạp seed.                                                                    |
+| MySQL `Access denied`                                  | Mật khẩu phải khớp volume hiện có; sửa `.env` không tự đổi mật khẩu trong database.                                       |
+| Thiếu bảng/cột                                         | Kiểm tra schema/migration; không xóa volume hoặc seed liên tục để chữa lỗi schema.                                        |
+| Frontend timeout/503                                   | Kiểm tra Gateway và service đích, MySQL, cấu hình URL/port; đối chiếu `X-Trace-Id`.                                       |
+| HTTP 401 sau logout/đổi mật khẩu                       | Đăng nhập lại; xác nhận Identity hoạt động và JWT issuer/secret thống nhất.                                               |
+| Customer chưa dùng được portal                         | Admin kiểm tra scope và liên kết tài khoản với hồ sơ khách hàng.                                                          |
+| WSL không gọi được AI Windows                          | Kiểm tra host IP, bind `0.0.0.0`, port `8090` và firewall; localhost Windows thành công chưa chứng minh WSL kết nối được. |
+
+## Giới hạn hiện tại
+
+- Thanh toán COD/tiền mặt/chuyển khoản được nhân viên ghi nhận thủ công; chưa tích hợp ngân hàng, hãng vận chuyển hoặc hóa đơn thuế.
+- Ký xác nhận lưu họ tên, người thực hiện, thời gian và SHA-256 nội dung; không xác minh bằng chứng thư số/OTP/dịch vụ ký bên ngoài.
+- Bảo trì bắt đầu/kết thúc thủ công; giao/nhận theo cả lô với tình trạng chung và trả về kho ban đầu.
+- Hóa đơn chụp số tiền lúc phát hành; chưa tự lập hóa đơn phí gia hạn/thuế/phạt hoặc sửa/xóa giao dịch đã ghi. Tiền cọc không tự bù vào tiền thuê/doanh thu.
+- Đồng bộ lỗi có nhật ký bền vững và retry bằng người dùng có quyền; chưa phải saga/outbox hoàn chỉnh hay cơ chế retry nền phân tán. Không lưu bearer token để retry.
+- Kiểm tra session online làm các request bảo vệ phụ thuộc Identity và tăng độ trễ; request đã qua xác thực không bị hủy giữa chừng khi thu hồi.
+- AI chỉ hỗ trợ tra cứu, chất lượng diễn đạt phụ thuộc chế độ/model; fallback chỉ đọc không thay thế nghiệp vụ của service.
+- Dự án chưa được xác nhận sẵn sàng production. Cần hardening cấu hình, bảo vệ secrets, HTTPS, quan sát vận hành và kiểm thử tải trước khi triển khai thực tế.

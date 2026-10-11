@@ -6,9 +6,9 @@ import java.time.LocalDateTime;
 
 public record QuotationCreate(
         @NotNull Long rentalRequestId,
-        @NotNull BigDecimal rentalAmount,
-        @NotNull BigDecimal depositAmount,
-        @NotNull BigDecimal deliveryFee,
+        @NotNull @DecimalMin("0") BigDecimal rentalAmount,
+        @NotNull @DecimalMin("0") BigDecimal depositAmount,
+        @NotNull @DecimalMin("0") BigDecimal deliveryFee,
         String discountCode,
         @NotNull LocalDateTime validUntil,
         String specialTerms) {}

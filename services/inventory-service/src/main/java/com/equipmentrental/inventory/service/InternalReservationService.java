@@ -37,7 +37,7 @@ public class InternalReservationService {
 
     @Transactional
     public EquipmentReservationResponse extend(Long id, LocalDateTime newEndAt) {
-        EquipmentReservation reservation = reservationRepository.findById(id)
+        EquipmentReservation reservation = reservationRepository.findForDemoUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Reservation not found: " + id));
         if (reservation.getStatus() != ReservationStatus.CONFIRMED)
             throw new IllegalStateException("Chỉ gia hạn được giữ chỗ đã xác nhận");
@@ -297,7 +297,7 @@ public class InternalReservationService {
 
         EquipmentReservation reservation =
                 reservationRepository
-                        .findById(id)
+                        .findForDemoUpdate(id)
                         .orElseThrow(() ->
                                 new ResourceNotFoundException(
                                         "Reservation not found: "
@@ -314,6 +314,7 @@ public class InternalReservationService {
          *
          * Các trạng thái khác không được confirm.
          */
+        if (reservation.getStatus()==ReservationStatus.CONFIRMED) return toResponse(reservation);
         if (reservation.getStatus()
                 != ReservationStatus.HELD) {
 
@@ -589,7 +590,7 @@ public class InternalReservationService {
 
         EquipmentReservation reservation =
                 reservationRepository
-                        .findById(id)
+                        .findForDemoUpdate(id)
                         .orElseThrow(() ->
                                 new ResourceNotFoundException(
                                         "Reservation not found: " + id

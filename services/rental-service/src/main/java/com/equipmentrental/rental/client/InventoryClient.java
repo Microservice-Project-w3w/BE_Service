@@ -22,6 +22,8 @@ import com.equipmentrental.rental.exception.ApiException;
 @Component
 public class InventoryClient {
     private final RestClient restClient;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    private com.equipmentrental.rental.service.DemoSyncJournal journal;
 
     public InventoryClient(@Value("${app.integration.inventory-base-url}") String baseUrl) {
         var factory = new SimpleClientHttpRequestFactory();
@@ -76,13 +78,17 @@ public class InventoryClient {
     }
 
     public String createReservation(RentalOrder order, LocalDateTime reservedUntil, List<Long> equipmentIds) {
+        var snapshot = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        snapshot.put("organizationId", order.getOrganizationId()).put("branchId", order.getBranchId())
+                .put("rentalOrderId", order.getId()).put("requestReference", order.getOrderCode() + ":" + reservedUntil);
+        track("CREATE", snapshot);
         try {
             JsonNode response = restClient
                     .post().uri("/internal/reservations")
                     .headers(this::forwardBearerToken)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(new ReservationRequest(
-                            order.getOrderCode(),
+                            order.getOrderCode() + ":" + reservedUntil,
                             order.getOrganizationId(),
                             order.getBranchId(),
                             order.getId(),
@@ -106,9 +112,13 @@ public class InventoryClient {
     }
 
     public void confirmReservation(String reservationId) {
+        track("CONFIRM", snapshot(reservationId));
         postWithoutBody("/internal/reservations/" + reservationId + "/confirm");
     }
     public void extendReservation(String reservationId, LocalDateTime newEndAt) {
+        var before=snapshot(reservationId);
+        before.put("newEndAt",newEndAt.toString());
+        track("EXTEND",before);
         try {
             restClient.post().uri("/internal/reservations/" + reservationId + "/extend")
                     .headers(this::forwardBearerToken).contentType(MediaType.APPLICATION_JSON)
@@ -117,6 +127,7 @@ public class InventoryClient {
     }
 
     public void releaseReservation(String reservationId, String reason) {
+        track("RELEASE", snapshot(reservationId));
         try {
             restClient.post().uri("/internal/reservations/" + reservationId + "/release")
                     .headers(this::forwardBearerToken)
@@ -130,10 +141,56 @@ public class InventoryClient {
 
     private void postWithoutBody(String path) {
         try {
-            restClient.post().uri(path).headers(this::forwardBearerToken).retrieve().toBodilessEntity();
+            restClient.post().uri(path).headers(this::forwardBearerToken)
+                    .contentType(MediaType.APPLICATION_JSON).body(java.util.Map.of())
+                    .retrieve().toBodilessEntity();
         } catch (RestClientException exception) {
             throw unavailable(exception);
         }
+    }
+
+    private com.fasterxml.jackson.databind.node.ObjectNode snapshot(String id) {
+        if (journal==null) return com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        try {
+            return (com.fasterxml.jackson.databind.node.ObjectNode) data(restClient.get()
+                    .uri("/internal/demo-reservations/{id}",id).headers(this::forwardBearerToken)
+                    .retrieve().body(JsonNode.class));
+        } catch(RestClientException exception) { throw unavailable(exception); }
+    }
+
+    private void track(String kind, com.fasterxml.jackson.databind.node.ObjectNode snapshot) {
+        if (journal==null) return;
+        if (!org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive())
+            throw new IllegalStateException("Inventory mutation requires a Rental transaction");
+        snapshot.put("kind",kind);
+        var task=journal.begin(snapshot.path("rentalOrderId").asLong(), snapshot.path("organizationId").asLong(),
+                snapshot.path("branchId").asLong(),kind,snapshot.toString());
+        org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+            new org.springframework.transaction.support.TransactionSynchronization() {
+                @Override public void afterCompletion(int status) {
+                    try {
+                        if (status==STATUS_COMMITTED) journal.update(task.id,"DONE",null);
+                        else { compensate(snapshot); journal.update(task.id,"COMPENSATED",null); }
+                    } catch(RuntimeException exception) {
+                        try { journal.update(task.id,"PENDING","Chưa đồng bộ được Inventory; dùng nút Thử lại đồng bộ"); }
+                        catch(RuntimeException ignored) { /* The durable PENDING intent already exists. */ }
+                    }
+                }
+            });
+    }
+
+    public void compensate(JsonNode snapshot) {
+        try {
+            restClient.post().uri("/internal/demo-reservations/compensate").headers(this::forwardBearerToken)
+                    .contentType(MediaType.APPLICATION_JSON).body(snapshot).retrieve().toBodilessEntity();
+        } catch(RestClientException exception) { throw unavailable(exception); }
+    }
+
+    public JsonNode handover(JsonNode payload) {
+        try {
+            return data(restClient.post().uri("/internal/demo-handover").headers(this::forwardBearerToken)
+                    .contentType(MediaType.APPLICATION_JSON).body(payload).retrieve().body(JsonNode.class));
+        } catch(RestClientException exception) { throw unavailable(exception); }
     }
 
     private JsonNode data(JsonNode response) {

@@ -95,7 +95,7 @@ class RentalWorkflowServiceTest {
     @SuppressWarnings("unchecked")
     private <T> T repository(Class<T> type, Object findByIdValue) {
         return (T) Proxy.newProxyInstance(type.getClassLoader(), new Class<?>[] {type}, (proxy, method, args) -> {
-            if ("findById".equals(method.getName())) {
+            if ("findById".equals(method.getName()) || "findForUpdate".equals(method.getName())) {
                 return java.util.Optional.ofNullable(findByIdValue);
             }
             if (method.getReturnType().equals(boolean.class)) {

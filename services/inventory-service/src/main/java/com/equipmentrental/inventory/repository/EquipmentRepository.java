@@ -11,6 +11,8 @@ import java.util.Optional;
 public interface EquipmentRepository
         extends JpaRepository<Equipment, Long>,
         JpaSpecificationExecutor<Equipment> {
+    @org.springframework.data.jpa.repository.Query("select e.organizationId from Equipment e where e.id=:id")
+    Optional<Long> findDemoOrganizationId(@org.springframework.data.repository.query.Param("id") Long id);
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @org.springframework.data.jpa.repository.Query("select e from Equipment e where e.id = :id and e.organizationId = :organizationId")
     Optional<Equipment> lockForReservation(@org.springframework.data.repository.query.Param("id") Long id,

@@ -62,6 +62,14 @@ public class SessionService {
         session.revoke(reason);
     }
 
+    @Transactional(readOnly = true)
+    public void requireActiveForUser(Long userId, Long sessionId) {
+        UserSession session = repository.findByIdAndUserId(sessionId, userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Phiên đăng nhập không hợp lệ"));
+        if (!session.isActive())
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Phiên đăng nhập đã hết hạn hoặc bị thu hồi");
+    }
+
     public void revokeAllForUser(Long userId, String reason) {
         repository.findByUserIdOrderByLoginAtDesc(userId).forEach(session -> session.revoke(reason));
     }

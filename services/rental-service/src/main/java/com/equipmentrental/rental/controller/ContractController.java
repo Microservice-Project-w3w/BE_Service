@@ -72,6 +72,13 @@ public class ContractController {
         return ApiResponse.success(service.sign(id));
     }
 
+    @PatchMapping("/{id}/resubmit")
+    @PreAuthorize("hasAuthority('rental.contract.update')")
+    public ApiResponse<RentalContractResponse> resubmit(@PathVariable Long id,
+            @Valid @RequestBody com.equipmentrental.rental.dto.request.ContractRevisionRequest request) {
+        return ApiResponse.success(service.resubmit(id, request));
+    }
+
     @PatchMapping("/{id}/sign")
     @PreAuthorize("hasAuthority('rental.contract.sign')")
     public ApiResponse<RentalContractResponse> sign(@PathVariable Long id) {

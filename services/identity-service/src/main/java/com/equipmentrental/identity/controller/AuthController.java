@@ -126,7 +126,7 @@ public class AuthController {
     public ResponseEntity<ApiResponse<ProfileResponse>> getCurrentUser(
             JwtAuthenticationToken authentication
     ) {
-        return ResponseEntity.ok(ApiResponse.success(authService.profile(Long.valueOf(authentication.getToken().getSubject()))));
+        return ResponseEntity.ok(ApiResponse.success(authService.profile(authentication.getToken())));
     }
 
     @PutMapping("/me")

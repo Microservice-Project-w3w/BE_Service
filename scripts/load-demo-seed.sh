@@ -27,6 +27,7 @@ if [ "${role_count:-0}" -eq 0 ]; then
 fi
 
 bash "$project_root/scripts/enable-customer-portal-demo.sh"
+bash "$project_root/scripts/enable-demo-operations.sh"
 
 for seed_file in \
   "$seed_directory/01-organization-customer-demo.sql" \

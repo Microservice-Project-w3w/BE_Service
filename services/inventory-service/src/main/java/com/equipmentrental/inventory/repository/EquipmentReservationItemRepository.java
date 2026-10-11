@@ -11,6 +11,10 @@ import java.util.List;
 
 public interface EquipmentReservationItemRepository
         extends JpaRepository<EquipmentReservationItem, Long> {
+    @Query("select count(i) from EquipmentReservationItem i join EquipmentReservation r on r.id=i.reservationId "
+            + "where i.equipmentId=:id and i.endAt>:now and (r.status=com.equipmentrental.inventory.enums.ReservationStatus.CONFIRMED "
+            + "or (r.status=com.equipmentrental.inventory.enums.ReservationStatus.HELD and (r.expiresAt is null or r.expiresAt>:now)))")
+    long countFutureBlocking(@Param("id") Long id,@Param("now") LocalDateTime now);
 
     /*
      * Dùng khi cần lấy toàn bộ item của một reservation.

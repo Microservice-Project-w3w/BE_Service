@@ -50,4 +50,5 @@ fi
 echo "Starting $module (AI_SERVICE_URL=${AI_SERVICE_URL})"
 echo "Installing shared modules required by the selected service..."
 mvn -pl shared/common-web,shared/common-security,shared/event-contracts -am install -DskipTests
-exec mvn -pl "$module" spring-boot:run
+# Always rebuild this module: IDE-generated error stubs must not be reused.
+exec mvn -pl "$module" clean spring-boot:run

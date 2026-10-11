@@ -8,7 +8,7 @@ management:
 ai:
   ollama:
     base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
-    model: ${OLLAMA_MODEL:qwen2.5:7b}
+    model: ${OLLAMA_MODEL:viet-tutor-frog}
 security:
   jwt:
     issuer: ${JWT_ISSUER:equipment-rental-identity}

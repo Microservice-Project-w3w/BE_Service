@@ -194,5 +194,6 @@ public class RentalContract {
     }
 
     public String getRejectionReason() { return rejectionReason; }
+    public void setRejectionReason(String value) { rejectionReason = value; }
     public void reject(String reason) { status = ContractStatus.REJECTED; rejectionReason = reason; }
 }

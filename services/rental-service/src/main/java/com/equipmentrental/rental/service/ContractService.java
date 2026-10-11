@@ -28,6 +28,12 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 public class ContractService {
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    private com.equipmentrental.rental.repository.DemoRentalEventRepository demoEvents;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    private com.equipmentrental.rental.repository.DemoSyncTaskRepository demoTasks;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    private com.equipmentrental.rental.repository.DemoRentalAccountRepository demoAccounts;
     private final RentalContractRepository contracts;
     private final ContractAppendixRepository appendices;
     private final RentalOrderRepository orders;
@@ -48,10 +54,11 @@ public class ContractService {
     }
 
     public RentalContractResponse create(ContractCreateRequest request) {
-        if (contracts.existsByRentalOrderId(request.rentalOrderId())) throw new ApiException("Đơn thuê đã có hợp đồng");
-        RentalOrder order = orders.findById(request.rentalOrderId())
+        RentalOrder order = orders.findForUpdate(request.rentalOrderId())
                 .orElseThrow(() -> ApiException.notFound("Không tìm thấy đơn thuê"));
         dataScopeGuard.requireRentalAccess(order.getOrganizationId(), order.getBranchId(), order.getCustomerId());
+        if (contracts.existsByRentalOrderId(request.rentalOrderId()))
+            throw new ApiException("Đơn thuê đã có hợp đồng; nếu bị từ chối, sửa và gửi duyệt lại hợp đồng cũ");
         if (order.getStatus() != OrderStatus.CONFIRMED)
             throw ApiException.invalidStatus("Chỉ tạo hợp đồng cho đơn đã xác nhận");
         RentalContract contract = new RentalContract();
@@ -85,7 +92,7 @@ public class ContractService {
     }
 
     public RentalContractResponse approve(Long id) {
-        RentalContract contract = contract(id);
+        RentalContract contract = contractForUpdate(id);
         if (contract.getStatus() != ContractStatus.PENDING_APPROVAL)
             throw ApiException.invalidStatus("Hợp đồng chưa ở trạng thái chờ phê duyệt");
         contract.approve();
@@ -93,7 +100,7 @@ public class ContractService {
     }
 
     public RentalContractResponse reject(Long id, RejectContractRequest request) {
-        RentalContract contract = contract(id);
+        RentalContract contract = contractForUpdate(id);
         if (contract.getStatus() != ContractStatus.PENDING_APPROVAL)
             throw ApiException.invalidStatus("Hợp đồng chưa ở trạng thái chờ phê duyệt");
         contract.reject(request.reason());
@@ -101,7 +108,7 @@ public class ContractService {
     }
 
     public RentalContractResponse sign(Long id) {
-        RentalContract contract = contract(id);
+        RentalContract contract = contractForUpdate(id);
         if (contract.getStatus() != ContractStatus.APPROVED)
             throw ApiException.invalidStatus("Hợp đồng chưa được phê duyệt");
         contract.sign();
@@ -109,7 +116,11 @@ public class ContractService {
     }
 
     public RentalContractResponse cancel(Long id, CancelContractRequest request) {
-        RentalContract contract = contract(id);
+        RentalContract contract = contractForUpdate(id);
+        if (demoTasks!=null && demoTasks.existsByRentalOrderIdAndStatus(contract.getRentalOrderId(),"PENDING"))
+            throw ApiException.invalidStatus("Cần xử lý đồng bộ đang chờ trước khi hủy hợp đồng");
+        if (demoEvents!=null && demoEvents.findByRentalOrderIdOrderByIdAsc(contract.getRentalOrderId()).stream().anyMatch(e -> e.kind.equals("DELIVERED")))
+            throw ApiException.invalidStatus("Đã bàn giao; phải nhận trả, tất toán và thanh lý thay vì hủy");
         if (contract.getStatus() == ContractStatus.LIQUIDATED || contract.getStatus() == ContractStatus.CANCELLED)
             throw ApiException.invalidStatus("Không thể hủy hợp đồng ở trạng thái hiện tại");
         contract.cancel(request.reason());
@@ -117,11 +128,22 @@ public class ContractService {
     }
 
     public RentalContractResponse liquidate(Long id) {
-        RentalContract contract = contract(id);
+        RentalContract contract = contractForUpdate(id);
         if (contract.getStatus() != ContractStatus.SIGNED
                 && contract.getStatus() != ContractStatus.ACTIVE
                 && contract.getStatus() != ContractStatus.EXTENDED)
             throw ApiException.invalidStatus("Chỉ thanh lý hợp đồng đã ký");
+        if (demoEvents!=null) {
+            var history=demoEvents.findByRentalOrderIdOrderByIdAsc(contract.getRentalOrderId());
+            if (history.stream().noneMatch(e -> e.kind.equals("RETURNED")))
+                throw ApiException.invalidStatus("Chưa có biên bản nhận trả thực tế");
+            var account=demoAccounts.findById(contract.getRentalOrderId()).orElseThrow(() -> new ApiException("Chưa có hóa đơn"));
+            if (!account.invoiceIssued || account.invoiceCancelled || account.invoiceAmount.subtract(DemoBillingService.sum(history,"PAYMENT")).signum()>0)
+                throw ApiException.invalidStatus("Cần tất toán tiền thuê trước thanh lý");
+            if (DemoBillingService.sum(history,"DEPOSIT_COLLECT").subtract(DemoBillingService.sum(history,"DEPOSIT_REFUND"))
+                    .subtract(DemoBillingService.sum(history,"DEPOSIT_DEDUCT")).signum()!=0)
+                throw ApiException.invalidStatus("Cần hoàn/khấu trừ hết cọc trước thanh lý");
+        }
         contract.liquidate();
         return RentalResponseMapper.contract(contracts.save(contract));
     }
@@ -173,7 +195,7 @@ public class ContractService {
         ContractAppendix appendix = appendix(id);
         if (appendix.getStatus() != AppendixStatus.APPROVED)
             throw ApiException.invalidStatus("Phụ lục chưa được phê duyệt");
-        RentalContract contract = contract(appendix.getContractId());
+        RentalContract contract = contractForUpdate(appendix.getContractId());
         requireActiveContract(contract);
         appendix.sign();
         if (appendix.getAppendixType() == AppendixType.EXTENSION) {
@@ -198,6 +220,39 @@ public class ContractService {
                 && contract.getStatus() != ContractStatus.EXTENDED)
             throw ApiException.invalidStatus("Chỉ xử lý phụ lục của hợp đồng đang hiệu lực");
     }
+
+    public RentalContractResponse resubmit(Long id,
+            com.equipmentrental.rental.dto.request.ContractRevisionRequest request) {
+        // Read only the scalar ID first: do not cache a stale REJECTED entity before locking.
+        Long orderId = contracts.findRentalOrderId(id)
+                .orElseThrow(() -> ApiException.notFound("Không tìm thấy hợp đồng"));
+        RentalOrder order = orders.findForUpdate(orderId)
+                .orElseThrow(() -> ApiException.notFound("Không tìm thấy đơn thuê"));
+        dataScopeGuard.requireRentalAccess(order.getOrganizationId(), order.getBranchId(), order.getCustomerId());
+        RentalContract contract = contractForUpdate(id);
+        if (contract.getStatus() != ContractStatus.REJECTED)
+            throw ApiException.invalidStatus("Chỉ sửa và gửi duyệt lại hợp đồng bị từ chối");
+        if (order.getStatus() != OrderStatus.CONFIRMED)
+            throw ApiException.invalidStatus("Đơn thuê không còn được xác nhận, không thể gửi lại hợp đồng");
+        if (request.terms() == null || request.terms().isBlank()) throw new ApiException("Cần điều khoản đã chỉnh sửa");
+        contract.setTerms(request.terms().trim());
+        contract.setRejectionReason(null);
+        contract.setStatus(ContractStatus.PENDING_APPROVAL);
+        return RentalResponseMapper.contract(contracts.save(contract));
+    }
+
+    private RentalContract contractForUpdate(Long id) {
+        if (demoEvents!=null) {
+            Long orderId=contracts.findRentalOrderId(id).orElseThrow(() -> ApiException.notFound("Không tìm thấy hợp đồng"));
+            var order=orders.findForUpdate(orderId).orElseThrow(() -> ApiException.notFound("Không tìm thấy đơn thuê"));
+            dataScopeGuard.requireRentalAccess(order.getOrganizationId(),order.getBranchId(),order.getCustomerId());
+        }
+        RentalContract value = contracts.findForUpdate(id)
+                .orElseThrow(() -> ApiException.notFound("Không tìm thấy hợp đồng"));
+        dataScopeGuard.requireRentalAccess(value.getOrganizationId(), value.getBranchId(), value.getCustomerId());
+        return value;
+    }
+
 
     private RentalContract contract(Long id) {
         RentalContract value =

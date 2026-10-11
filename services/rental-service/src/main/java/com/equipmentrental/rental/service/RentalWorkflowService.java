@@ -36,6 +36,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 public class RentalWorkflowService {
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    private com.equipmentrental.rental.repository.DemoRentalEventRepository demoEvents;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    private com.equipmentrental.rental.repository.DemoSyncTaskRepository demoTasks;
     private final RentalRequestRepository requests;
     private final QuotationRepository quotations;
     private final RentalOrderRepository orders;
@@ -103,7 +107,7 @@ public class RentalWorkflowService {
     }
 
     public RentalRequestResponse cancelRequest(Long id) {
-        RentalRequest e = findRequest(id);
+        RentalRequest e = findRequestForUpdate(id);
         if (e.getStatus() != RequestStatus.DRAFT && e.getStatus() != RequestStatus.SUBMITTED) {
             throw ApiException.invalidStatus("Chỉ được hủy yêu cầu ở trạng thái DRAFT hoặc SUBMITTED");
         }
@@ -127,7 +131,7 @@ public class RentalWorkflowService {
     }
 
     public RentalRequestResponse updateRequest(Long id, RentalRequestUpdate request) {
-        RentalRequest rentalRequest = findRequest(id);
+        RentalRequest rentalRequest = findRequestForUpdate(id);
         if (rentalRequest.getStatus() != RequestStatus.DRAFT && rentalRequest.getStatus() != RequestStatus.SUBMITTED) {
             throw ApiException.invalidStatus("Không thể sửa yêu cầu đã được xử lý");
         }
@@ -153,7 +157,13 @@ public class RentalWorkflowService {
     }
 
     public QuotationResponse createQuotation(QuotationCreate r) {
-        RentalRequest req = findRequest(r.rentalRequestId());
+        RentalRequest req = findRequestForUpdate(r.rentalRequestId());
+        if (req.getStatus() == RequestStatus.CANCELLED || req.getStatus() == RequestStatus.REJECTED)
+            throw ApiException.invalidStatus("Không lập báo giá từ yêu cầu đã hủy hoặc bị từ chối");
+        if (quotations.existsByRentalRequestIdAndStatusNotIn(req.getId(), List.of(
+                QuotationStatus.REJECTED, QuotationStatus.CANCELLED, QuotationStatus.EXPIRED)))
+            throw ApiException.invalidStatus("Yêu cầu đã có báo giá đang xử lý; sửa báo giá nháp hoặc xử lý báo giá cũ trước");
+        requireNonNegative(r.rentalAmount(), r.depositAmount(), r.deliveryFee());
         if (r.validUntil().isBefore(LocalDateTime.now())) {
             throw new ApiException("Hạn báo giá phải ở tương lai");
         }
@@ -196,22 +206,24 @@ public class RentalWorkflowService {
     }
 
     public QuotationResponse sendQuotation(Long id) {
-        Quotation q = findQuotation(id);
+        Quotation q = findQuotationForUpdate(id);
         if (q.getStatus() != QuotationStatus.DRAFT) throw ApiException.invalidStatus("Chỉ gửi được báo giá DRAFT");
+        requireValidQuotation(q);
         q.setStatus(QuotationStatus.SENT);
         return RentalResponseMapper.quotation(quotations.save(q));
     }
 
     public QuotationResponse approveQuotation(Long id) {
-        Quotation q = findQuotation(id);
+        Quotation q = findQuotationForUpdate(id);
         if (q.getStatus() != QuotationStatus.SENT && q.getStatus() != QuotationStatus.PENDING_APPROVAL)
             throw ApiException.invalidStatus("Chỉ phê duyệt được báo giá đã gửi");
+        requireValidQuotation(q);
         q.setStatus(QuotationStatus.APPROVED);
         return RentalResponseMapper.quotation(quotations.save(q));
     }
 
     public QuotationResponse acceptQuotation(Long id) {
-        Quotation q = findQuotation(id);
+        Quotation q = findQuotationForUpdate(id);
         if (q.getStatus() != QuotationStatus.APPROVED)
             throw ApiException.invalidStatus("Chỉ chấp nhận được báo giá đã được quản lý phê duyệt");
         if (q.getValidUntil() == null || !q.getValidUntil().isAfter(LocalDateTime.now()))
@@ -221,7 +233,7 @@ public class RentalWorkflowService {
     }
 
     public QuotationResponse rejectQuotation(Long id, String reason) {
-        Quotation q = findQuotation(id);
+        Quotation q = findQuotationForUpdate(id);
         if (q.getStatus() != QuotationStatus.SENT && q.getStatus() != QuotationStatus.PENDING_APPROVAL && q.getStatus() != QuotationStatus.APPROVED)
             throw ApiException.invalidStatus("Báo giá không thể từ chối ở trạng thái hiện tại");
         q.setStatus(QuotationStatus.REJECTED);
@@ -230,7 +242,8 @@ public class RentalWorkflowService {
     }
 
     public QuotationResponse updateQuotation(Long id, QuotationUpdate update) {
-        Quotation quotation = findQuotation(id);
+        Quotation quotation = findQuotationForUpdate(id);
+        requireNonNegative(update.rentalAmount(), update.depositAmount(), update.deliveryFee());
         if (quotation.getStatus() != QuotationStatus.DRAFT)
             throw ApiException.invalidStatus("Chỉ sửa được báo giá DRAFT");
         if (update.validUntil().isBefore(LocalDateTime.now())) throw new ApiException("Hạn báo giá phải ở tương lai");
@@ -251,9 +264,10 @@ public class RentalWorkflowService {
     }
 
     public RentalOrderResponse convertToOrder(Long id) {
-        Quotation q = findQuotation(id);
+        Quotation q = findQuotationForUpdate(id);
         if (q.getStatus() != QuotationStatus.ACCEPTED)
             throw ApiException.invalidStatus("Báo giá chưa được khách hàng chấp nhận");
+        requireValidQuotation(q);
         RentalRequest req = findRequest(q.getRentalRequestId());
         RentalOrder o = new RentalOrder();
         o.setOrderCode("ORD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
@@ -270,7 +284,7 @@ public class RentalWorkflowService {
     }
 
     public RentalOrderResponse reserve(Long id, ReserveOrderRequest r) {
-        RentalOrder o = findOrder(id);
+        RentalOrder o = findOrderForUpdate(id);
         if (o.getStatus() != OrderStatus.PENDING) throw ApiException.invalidStatus("Chỉ giữ chỗ đơn PENDING");
         if (!r.reservedUntil().isAfter(LocalDateTime.now()))
             throw new ApiException("Thời hạn giữ chỗ phải ở tương lai");
@@ -284,6 +298,7 @@ public class RentalWorkflowService {
         if (new LinkedHashSet<>(equipmentIds).size() != equipmentIds.size()) {
             throw new ApiException("Danh sách thiết bị giữ chỗ không được chứa ID trùng lặp");
         }
+        validateSelectedEquipment(o, equipmentIds);
         String reservationId = inventoryClient.createReservation(o, r.reservedUntil(), equipmentIds);
         o.setInventoryReservationId(reservationId);
         o.setReservedUntil(r.reservedUntil());
@@ -292,7 +307,11 @@ public class RentalWorkflowService {
     }
 
     public RentalOrderResponse cancelOrder(Long id, CancelOrderRequest r) {
-        RentalOrder o = findOrder(id);
+        RentalOrder o = findOrderForUpdate(id);
+        if (demoTasks!=null && demoTasks.existsByRentalOrderIdAndStatus(id,"PENDING"))
+            throw ApiException.invalidStatus("Cần xử lý đồng bộ đang chờ trước khi hủy đơn");
+        if (demoEvents!=null && demoEvents.findByRentalOrderIdOrderByIdAsc(id).stream().anyMatch(e -> e.kind.equals("DELIVERED")))
+            throw ApiException.invalidStatus("Đơn đã bàn giao; nhận trả và thanh lý hợp đồng, không hủy đơn");
         if (o.getStatus() == OrderStatus.CANCELLED) throw ApiException.invalidStatus("Đơn đã bị hủy");
         if (contracts.existsByRentalOrderIdAndStatusNotIn(id, List.of(
                 com.equipmentrental.rental.entity.ContractStatus.CANCELLED,
@@ -305,7 +324,7 @@ public class RentalWorkflowService {
     }
 
     public RentalOrderResponse confirmOrder(Long id) {
-        RentalOrder order = findOrder(id);
+        RentalOrder order = findOrderForUpdate(id);
         if (order.getStatus() != OrderStatus.RESERVED || order.getInventoryReservationId() == null)
             throw ApiException.invalidStatus("Đơn chưa có giữ chỗ hợp lệ để xác nhận");
         inventoryClient.confirmReservation(order.getInventoryReservationId());
@@ -355,6 +374,57 @@ public class RentalWorkflowService {
         dataScopeGuard.requireRentalAccess(
                 request.getOrganizationId(), request.getBranchId(), request.getCustomerId());
         return request;
+    }
+
+    private RentalRequest findRequestForUpdate(Long id) {
+        RentalRequest value = requests.findForUpdate(id)
+                .orElseThrow(() -> ApiException.notFound("Không tìm thấy yêu cầu thuê"));
+        dataScopeGuard.requireRentalAccess(value.getOrganizationId(), value.getBranchId(), value.getCustomerId());
+        return value;
+    }
+
+    private Quotation findQuotationForUpdate(Long id) {
+        Quotation value = quotations.findForUpdate(id)
+                .orElseThrow(() -> ApiException.notFound("Không tìm thấy báo giá"));
+        dataScopeGuard.requireRentalAccess(value.getOrganizationId(), value.getBranchId(), value.getCustomerId());
+        return value;
+    }
+
+    private RentalOrder findOrderForUpdate(Long id) {
+        RentalOrder value = orders.findForUpdate(id)
+                .orElseThrow(() -> ApiException.notFound("Không tìm thấy đơn thuê"));
+        dataScopeGuard.requireRentalAccess(value.getOrganizationId(), value.getBranchId(), value.getCustomerId());
+        return value;
+    }
+
+    private void requireValidQuotation(Quotation q) {
+        if (q.getValidUntil() == null || !q.getValidUntil().isAfter(LocalDateTime.now()))
+            throw ApiException.invalidStatus("Báo giá đã hết hạn, cần lập hoặc cập nhật báo giá mới");
+    }
+
+    private void requireNonNegative(BigDecimal... amounts) {
+        for (BigDecimal amount : amounts)
+            if (amount == null || amount.signum() < 0)
+                throw new ApiException("Giá thuê, tiền cọc và phí giao không được âm");
+    }
+
+    private void validateSelectedEquipment(RentalOrder order, List<Long> selectedIds) {
+        RentalRequest request = findRequest(findQuotation(order.getQuotationId()).getRentalRequestId());
+        long required = request.getItems().stream().mapToLong(RentalRequestItem::getQuantity).sum();
+        if (selectedIds.size() != required)
+            throw new ApiException("Số thiết bị giữ chỗ phải bằng tổng số lượng đã yêu cầu");
+        var unmatched = new LinkedHashSet<>(selectedIds);
+        for (RentalRequestItem item : request.getItems()) {
+            JsonNode availability = inventoryClient.availability(order.getOrganizationId(), order.getBranchId(),
+                    item.getEquipmentTypeId(), order.getStartAt(), order.getEndAt(), item.getQuantity());
+            var candidates = new java.util.HashSet<Long>();
+            availability.path("equipmentIds").forEach(value -> candidates.add(value.asLong()));
+            var matched = unmatched.stream().filter(candidates::contains).toList();
+            if (!availability.path("available").asBoolean(false) || matched.size() != item.getQuantity())
+                throw new ApiException("Thiết bị đã chọn không đúng loại/số lượng hoặc không còn khả dụng: " + item.getEquipmentTypeId());
+            unmatched.removeAll(matched);
+        }
+        if (!unmatched.isEmpty()) throw new ApiException("Có thiết bị không thuộc yêu cầu thuê");
     }
 
     private Quotation findQuotation(Long id) {

@@ -50,6 +50,7 @@ public class VerificationService {
         return exposeCode ? code : null;
     }
 
+    @Transactional(noRollbackFor = IdentityException.class)
     public User verify(String email, String purpose, String code) {
         VerificationCode verification = repository.findFirstByEmailAndPurposeAndUsedAtIsNullOrderByCreatedAtDesc(email, purpose)
             .orElseThrow(() ->
