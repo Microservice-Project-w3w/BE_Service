@@ -1,5 +1,6 @@
 -- Demo users for identity-service. All accounts below use password Demo@123.
 -- Running this script resets only the five DEMO accounts to that known password.
+SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE identity_db;
 
 SET @demo_password_hash := '$2y$12$HlCMJq.5XC6ezHYnFk/gseExFW4/ic0Rm7rp8mmF.PGyJ/zBNiYdu';

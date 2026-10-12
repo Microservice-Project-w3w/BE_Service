@@ -1,5 +1,6 @@
 -- Demo data for organization-customer-service.
 -- This file is repeatable: it only creates or refreshes records whose code starts with DEMO-.
+SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE organization_customer_db;
 
 START TRANSACTION;

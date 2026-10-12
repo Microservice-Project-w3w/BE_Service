@@ -1,4 +1,5 @@
 -- Employee records must be loaded after 02-identity-demo.sql so their user_id values are available.
+SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE organization_customer_db;
 
 SET @demo_organization_id := (
