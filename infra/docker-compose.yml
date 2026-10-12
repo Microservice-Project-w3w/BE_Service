@@ -8,7 +8,8 @@ services:
       - "${MYSQL_PORT:-3306}:3306"
     volumes:
       - mysql-data:/var/lib/mysql
-      - ./mysql/init:/docker-entrypoint-initdb.d:ro
+      - ./mysql/init/01-core-service-schema.sql:/docker-entrypoint-initdb.d/01-core-service-schema.sql:ro
+      - ./mysql/init/02-customer-portal.sql:/docker-entrypoint-initdb.d/02-customer-portal.sql:ro
       - ./mysql/migrations/20261011_demo_operations.sql:/docker-entrypoint-initdb.d/03-demo-operations.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -p$${MYSQL_ROOT_PASSWORD}"]

@@ -135,6 +135,29 @@ Script dùng MySQL trong Compose, không yêu cầu cài MySQL client riêng. N�
 
 Chỉ seed database dev/demo. Chạy lại seed có thể đặt lại mật khẩu, trạng thái và thời gian của bản ghi mẫu dù không truncate database. Seed trước khi bật Inventory/Rental; không nạp lại nếu cần giữ nguyên phiên demo đang thực hiện.
 
+#### Bổ sung danh mục cho database demo đang dùng
+
+Nếu đã nạp seed trước đây, không cần chạy lại toàn bộ seed. Để có 8 loại thiết bị (máy ảnh, laptop, máy chiếu, loa, micro, đèn LED, tripod, camera hành trình), chạy:
+
+```bash
+bash scripts/extend-demo-catalog.sh
+```
+
+Script `07-customer-catalog-demo.sql` thêm dữ liệu nền còn thiếu và tối đa 16 thiết bị vật lý tại kho `DEMO-HN-WH`; sửa các chuỗi tiếng Việt mẫu bị nạp sai mã hóa. Chạy lại không nhân bản tài sản, không đặt lại trạng thái giữ chỗ/thuê/bảo trì, không sửa mật khẩu hoặc chứng từ. Mô tả đã sửa thủ công được giữ nguyên. Database mới nạp bằng `load-demo-seed.sh` đã bao gồm phần này.
+
+Frontend hiển thị ảnh minh họa SVG lưu tại `public/images/equipment/` theo mã loại thiết bị. Đây không phải ảnh thực tế từng tài sản hay thông tin cấu hình được cam kết. Kiểm tra lịch trống qua API trước khi gửi yêu cầu; số thiết bị trạng thái `AVAILABLE` không thay thế kiểm tra khoảng thời gian thuê.
+
+#### Sửa tiếng Việt trong dữ liệu demo đã nạp trước đây
+
+Nếu địa chỉ hiện thành `Nam Tá»« LiÃªm...`, dữ liệu cũ đã bị nhập sai mã hóa (không phải lỗi font). Xem các trường cần sửa trước:
+
+```bash
+bash scripts/repair-demo-encoding.sh --check
+bash scripts/repair-demo-encoding.sh --apply
+```
+
+Script chỉ sửa chuỗi lỗi khớp chính xác nội dung seed trong tổ chức `DEMO-RENTAI`: yêu cầu thuê, điều khoản báo giá/hợp đồng/phụ lục và thông tin khách hàng/chi nhánh mẫu. Nội dung đã sửa thủ công, bản ghi ngoài phạm vi demo, thời gian, trạng thái, số tiền và mật khẩu được giữ nguyên. Chạy lại không phát sinh thay đổi khi đã sửa xong. Không nạp lại toàn bộ seed để chữa lỗi này. Sau khi sửa, tải lại trang; không cần khởi động lại service.
+
 ### 4. Khởi động các service còn lại
 
 Mỗi dòng dưới đây chạy trong **một terminal riêng**, tại thư mục backend:

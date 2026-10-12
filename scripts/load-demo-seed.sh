@@ -35,7 +35,9 @@ for seed_file in \
   "$seed_directory/03-organization-customer-assignments-demo.sql" \
   "$seed_directory/04-inventory-demo.sql" \
   "$seed_directory/05-rental-demo.sql" \
-  "$seed_directory/06-customer-portal-demo.sql"; do
+  "$seed_directory/06-customer-portal-demo.sql" \
+  "$seed_directory/07-customer-catalog-demo.sql" \
+  "$seed_directory/08-repair-demo-encoding.sql"; do
   echo "Loading $(basename "$seed_file")"
   "${compose[@]}" exec -T -e "MYSQL_PWD=$mysql_password" mysql mysql --default-character-set=utf8mb4 -uroot < "$seed_file"
 done

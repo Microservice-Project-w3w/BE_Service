@@ -1,4 +1,5 @@
 -- Demo workflow data for rental-service: request -> quotation -> order -> contract.
+SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE rental_db;
 
 SET @demo_organization_id := (

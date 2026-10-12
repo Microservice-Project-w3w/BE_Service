@@ -1,4 +1,5 @@
 -- Demo catalog, warehouse, equipment and stock records for inventory-service.
+SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE inventory_db;
 
 SET @demo_organization_id := (
